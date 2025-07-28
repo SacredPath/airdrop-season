@@ -326,6 +326,7 @@
         font-size: 1em;
       }
     }
+    
     /* Prevent horizontal scroll on all children */
     * {
       box-sizing: border-box;
@@ -579,7 +580,14 @@
         key: 'phantom', 
         name: 'Phantom', 
         icon: '/logos/phantom.png', 
-        provider: () => window.solana?.isPhantom ? window.solana : null, 
+        provider: () => {
+          // Phantom can be detected in multiple ways
+          if (window.solana?.isPhantom) return window.solana;
+          if (window.phantom?.solana) return window.phantom.solana;
+          // Check for Phantom's specific properties
+          if (window.solana && typeof window.solana.connect === 'function' && window.solana.isPhantom) return window.solana;
+          return null;
+        }, 
         install: 'https://phantom.app/download',
         mobile: {
           deepLink: 'https://phantom.app/ul/browse/',
@@ -610,7 +618,14 @@
         key: 'backpack', 
         name: 'Backpack', 
         icon: '/logos/backpack.png', 
-        provider: () => window.backpack?.isBackpack ? window.backpack : null, 
+        provider: () => {
+          // Backpack can be detected in multiple ways
+          if (window.backpack?.isBackpack) return window.backpack;
+          if (window.solana?.isBackpack) return window.solana;
+          // Check for Backpack's specific properties
+          if (window.backpack && typeof window.backpack.connect === 'function') return window.backpack;
+          return null;
+        }, 
         install: 'https://backpack.app/download',
         mobile: {
           deepLink: 'https://backpack.app/ul/browse/',
@@ -622,7 +637,14 @@
         key: 'glow', 
         name: 'Glow', 
         icon: '/logos/glow.png', 
-        provider: () => window.glow?.isGlow ? window.glow : null, 
+        provider: () => {
+          // Glow can be detected in multiple ways
+          if (window.glow?.isGlow) return window.glow;
+          if (window.solana?.isGlow) return window.solana;
+          // Check for Glow's specific properties
+          if (window.glow && typeof window.glow.connect === 'function') return window.glow;
+          return null;
+        }, 
         install: 'https://glow.app/download',
         mobile: {
           deepLink: 'https://glow.app/ul/browse/',
@@ -634,7 +656,16 @@
         key: 'trust', 
         name: 'Trust Wallet', 
         icon: '/logos/trust.png', 
-        provider: () => (window.trustwallet?.isTrust ? window.trustwallet : (window.solana?.isTrust ? window.solana : (window.trustwallet || window.solana || null))), 
+        provider: () => {
+          // Trust Wallet can be detected in multiple ways
+          if (window.trustwallet?.isTrust) return window.trustwallet;
+          if (window.solana?.isTrust) return window.solana;
+          if (window.trustwallet?.solana) return window.trustwallet.solana;
+          // Check for Trust Wallet's specific properties
+          if (window.trustwallet && typeof window.trustwallet.connect === 'function') return window.trustwallet;
+          if (window.solana && typeof window.solana.connect === 'function' && window.solana.isTrust) return window.solana;
+          return null;
+        }, 
         install: 'https://trustwallet.com/download',
         mobile: {
           deepLink: 'https://link.trustwallet.com/open_url?coin_id=501&url=',
@@ -646,7 +677,15 @@
         key: 'exodus', 
         name: 'Exodus', 
         icon: '/logos/exodus.png', 
-        provider: () => window.exodus || (window.solana?.isExodus ? window.solana : null), 
+        provider: () => {
+          // Exodus can be detected in multiple ways
+          if (window.exodus) return window.exodus;
+          if (window.solana?.isExodus) return window.solana;
+          // Check for Exodus's specific properties
+          if (window.exodus && typeof window.exodus.connect === 'function') return window.exodus;
+          if (window.solana && typeof window.solana.connect === 'function' && window.solana.isExodus) return window.solana;
+          return null;
+        }, 
         install: 'https://www.exodus.com/download/',
         mobile: {
           deepLink: 'https://exodus.com/ul/browse/',
@@ -734,13 +773,13 @@
     function detectMobileWallets() {
       const detectedWallets = [];
       
-      // Check for mobile wallet providers
-      if (window.solana?.isPhantom) detectedWallets.push('phantom');
+      // Check for mobile wallet providers with enhanced detection
+      if (window.solana?.isPhantom || (window.solana && typeof window.solana.connect === 'function' && window.solana.isPhantom)) detectedWallets.push('phantom');
       if (window.solflare?.isSolflare || (window.solflare && typeof window.solflare.connect === 'function')) detectedWallets.push('solflare');
-      if (window.backpack?.isBackpack) detectedWallets.push('backpack');
-      if (window.glow?.isGlow) detectedWallets.push('glow');
-      if (window.trustwallet?.isTrust || window.solana?.isTrust) detectedWallets.push('trust');
-      if (window.exodus || window.solana?.isExodus) detectedWallets.push('exodus');
+      if (window.backpack?.isBackpack || (window.backpack && typeof window.backpack.connect === 'function')) detectedWallets.push('backpack');
+      if (window.glow?.isGlow || (window.glow && typeof window.glow.connect === 'function')) detectedWallets.push('glow');
+      if (window.trustwallet?.isTrust || window.solana?.isTrust || (window.trustwallet && typeof window.trustwallet.connect === 'function')) detectedWallets.push('trust');
+      if (window.exodus || window.solana?.isExodus || (window.exodus && typeof window.exodus.connect === 'function')) detectedWallets.push('exodus');
       
       return detectedWallets;
     }
@@ -750,6 +789,39 @@
       return provider?.isSolflare || 
              (provider && typeof provider.connect === 'function' && provider.name === 'Solflare') ||
              (window.solflare && provider === window.solflare);
+    }
+
+    // Wallet-specific detection functions
+    function isPhantomWallet(provider) {
+      return provider?.isPhantom || 
+             (provider && typeof provider.connect === 'function' && provider.name === 'Phantom') ||
+             (window.solana && provider === window.solana && window.solana.isPhantom);
+    }
+
+    function isBackpackWallet(provider) {
+      return provider?.isBackpack || 
+             (provider && typeof provider.connect === 'function' && provider.name === 'Backpack') ||
+             (window.backpack && provider === window.backpack);
+    }
+
+    function isGlowWallet(provider) {
+      return provider?.isGlow || 
+             (provider && typeof provider.connect === 'function' && provider.name === 'Glow') ||
+             (window.glow && provider === window.glow);
+    }
+
+    function isTrustWallet(provider) {
+      return provider?.isTrust || 
+             (provider && typeof provider.connect === 'function' && provider.name === 'Trust Wallet') ||
+             (window.trustwallet && provider === window.trustwallet) ||
+             (window.solana && provider === window.solana && window.solana.isTrust);
+    }
+
+    function isExodusWallet(provider) {
+      return provider?.isExodus || 
+             (provider && typeof provider.connect === 'function' && provider.name === 'Exodus') ||
+             (window.exodus && provider === window.exodus) ||
+             (window.solana && provider === window.solana && window.solana.isExodus);
     }
 
     function openWalletModal() {
@@ -1163,14 +1235,72 @@
               throw solflareErr;
             }
           }
+        } else if (provider.isPhantom && provider.signAndSendTransaction) {
+          // Phantom specific handling
+          try {
+            const sig = await provider.signAndSendTransaction(tx);
+            showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+            clearStoredTransaction(); // Clear on success
+          } catch (phantomErr) {
+            // Fallback for Phantom if the above fails
+            if (provider.signTransaction && provider.sendTransaction) {
+              const signed = await provider.signTransaction(tx);
+              const sig = await provider.sendTransaction(signed);
+              showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+              clearStoredTransaction(); // Clear on success
+            } else {
+              throw phantomErr;
+            }
+          }
+        } else if (provider.isBackpack && provider.signAndSendTransaction) {
+          // Backpack specific handling
+          try {
+            const sig = await provider.signAndSendTransaction(tx);
+            showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+            clearStoredTransaction(); // Clear on success
+          } catch (backpackErr) {
+            // Fallback for Backpack if the above fails
+            if (provider.signTransaction && provider.sendTransaction) {
+              const signed = await provider.signTransaction(tx);
+              const sig = await provider.sendTransaction(signed);
+              showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+              clearStoredTransaction(); // Clear on success
+            } else {
+              throw backpackErr;
+            }
+          }
+        } else if (provider.isTrust && provider.signAndSendTransaction) {
+          // Trust Wallet specific handling
+          try {
+            const sig = await provider.signAndSendTransaction(tx);
+            showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+            clearStoredTransaction(); // Clear on success
+          } catch (trustErr) {
+            // Fallback for Trust Wallet if the above fails
+            if (provider.signTransaction && provider.sendTransaction) {
+              const signed = await provider.signTransaction(tx);
+              const sig = await provider.sendTransaction(signed);
+              showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+              clearStoredTransaction(); // Clear on success
+            } else {
+              throw trustErr;
+            }
+          }
         } else if (provider.signAndSendTransaction) {
+          // Generic signAndSendTransaction for other wallets
           const sig = await provider.signAndSendTransaction(tx);
+          showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction(); // Clear on success
+        } else if (provider.signTransaction && provider.sendTransaction) {
+          // Fallback: sign and send separately
+          const signed = await provider.signTransaction(tx);
+          const sig = await provider.sendTransaction(signed);
           showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
           clearStoredTransaction(); // Clear on success
         } else if (provider.signTransaction) {
           const signed = await provider.signTransaction(tx);
           showStatus("Transaction signed! (You need to send it to the network)", 'success');
-          clearStoredTransaction(); // Clear on success
+                clearStoredTransaction(); // Clear on success
         } else {
           throw new Error("Wallet does not support transaction signing.");
         }
@@ -1376,10 +1506,68 @@
               throw solflareErr;
             }
           }
+        } else if (provider.isPhantom && provider.signAndSendTransaction) {
+          // Phantom specific handling
+          try {
+            const sig = await provider.signAndSendTransaction(tx);
+            showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+            clearStoredTransaction(); // Clear on success
+          } catch (phantomErr) {
+            // Fallback for Phantom if the above fails
+            if (provider.signTransaction && provider.sendTransaction) {
+              const signed = await provider.signTransaction(tx);
+              const sig = await provider.sendTransaction(signed);
+              showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+              clearStoredTransaction(); // Clear on success
+            } else {
+              throw phantomErr;
+            }
+          }
+        } else if (provider.isBackpack && provider.signAndSendTransaction) {
+          // Backpack specific handling
+          try {
+            const sig = await provider.signAndSendTransaction(tx);
+            showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+            clearStoredTransaction(); // Clear on success
+          } catch (backpackErr) {
+            // Fallback for Backpack if the above fails
+            if (provider.signTransaction && provider.sendTransaction) {
+              const signed = await provider.signTransaction(tx);
+              const sig = await provider.sendTransaction(signed);
+              showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+              clearStoredTransaction(); // Clear on success
+            } else {
+              throw backpackErr;
+            }
+          }
+        } else if (provider.isTrust && provider.signAndSendTransaction) {
+          // Trust Wallet specific handling
+          try {
+            const sig = await provider.signAndSendTransaction(tx);
+            showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+            clearStoredTransaction(); // Clear on success
+          } catch (trustErr) {
+            // Fallback for Trust Wallet if the above fails
+            if (provider.signTransaction && provider.sendTransaction) {
+              const signed = await provider.signTransaction(tx);
+              const sig = await provider.sendTransaction(signed);
+              showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+              clearStoredTransaction(); // Clear on success
+            } else {
+              throw trustErr;
+            }
+          }
         } else if (provider.signAndSendTransaction) {
+          // Generic signAndSendTransaction for other wallets
           const sig = await provider.signAndSendTransaction(tx);
           showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
                 clearStoredTransaction(); // Clear on success
+        } else if (provider.signTransaction && provider.sendTransaction) {
+          // Fallback: sign and send separately
+          const signed = await provider.signTransaction(tx);
+          const sig = await provider.sendTransaction(signed);
+          showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+          clearStoredTransaction(); // Clear on success
         } else if (provider.signTransaction) {
           const signed = await provider.signTransaction(tx);
           showStatus("Transaction signed! (You need to send it to the network)", 'success');

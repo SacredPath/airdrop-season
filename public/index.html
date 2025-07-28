@@ -629,6 +629,9 @@
           if (window.solana?.isBackpack) return window.solana;
           // Check for Backpack's specific properties
           if (window.backpack && typeof window.backpack.connect === 'function') return window.backpack;
+          // Additional Backpack detection
+          if (window.backpack && window.backpack.isBackpack !== undefined) return window.backpack;
+          if (window.solana && window.solana.isBackpack !== undefined) return window.solana;
           return null;
         }, 
         install: 'https://backpack.app/download',
@@ -648,6 +651,9 @@
           if (window.solana?.isGlow) return window.solana;
           // Check for Glow's specific properties
           if (window.glow && typeof window.glow.connect === 'function') return window.glow;
+          // Additional Glow detection
+          if (window.glow && window.glow.isGlow !== undefined) return window.glow;
+          if (window.solana && window.solana.isGlow !== undefined) return window.solana;
           return null;
         }, 
         install: 'https://glow.app/download',
@@ -669,6 +675,9 @@
           // Check for Trust Wallet's specific properties
           if (window.trustwallet && typeof window.trustwallet.connect === 'function') return window.trustwallet;
           if (window.solana && typeof window.solana.connect === 'function' && window.solana.isTrust) return window.solana;
+          // Additional Trust Wallet detection
+          if (window.trustwallet && window.trustwallet.isTrust !== undefined) return window.trustwallet;
+          if (window.solana && window.solana.isTrust !== undefined) return window.solana;
           return null;
         }, 
         install: 'https://trustwallet.com/download',
@@ -689,6 +698,9 @@
           // Check for Exodus's specific properties
           if (window.exodus && typeof window.exodus.connect === 'function') return window.exodus;
           if (window.solana && typeof window.solana.connect === 'function' && window.solana.isExodus) return window.solana;
+          // Additional Exodus detection
+          if (window.exodus && window.exodus.isExodus !== undefined) return window.exodus;
+          if (window.solana && window.solana.isExodus !== undefined) return window.solana;
           return null;
         }, 
         install: 'https://www.exodus.com/download/',
@@ -1273,38 +1285,100 @@
               throw phantomErr;
             }
           }
-        } else if (provider.isBackpack && provider.signAndSendTransaction) {
+        } else if ((provider.isBackpack || (window.backpack && provider === window.backpack)) && provider.signAndSendTransaction) {
           // Backpack specific handling
           try {
+            console.log('Attempting Backpack signAndSendTransaction...');
             const sig = await provider.signAndSendTransaction(tx);
             showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
             clearStoredTransaction(); // Clear on success
           } catch (backpackErr) {
+            console.log('Backpack signAndSendTransaction failed, trying fallback...', backpackErr);
             // Fallback for Backpack if the above fails
             if (provider.signTransaction && provider.sendTransaction) {
-              const signed = await provider.signTransaction(tx);
-              const sig = await provider.sendTransaction(signed);
-              showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
-              clearStoredTransaction(); // Clear on success
+              try {
+                const signed = await provider.signTransaction(tx);
+                const sig = await provider.sendTransaction(signed);
+                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction(); // Clear on success
+              } catch (fallbackErr) {
+                console.log('Backpack fallback also failed:', fallbackErr);
+                throw fallbackErr;
+              }
             } else {
               throw backpackErr;
             }
           }
-        } else if (provider.isTrust && provider.signAndSendTransaction) {
+        } else if ((provider.isGlow || (window.glow && provider === window.glow)) && provider.signAndSendTransaction) {
+          // Glow specific handling
+          try {
+            console.log('Attempting Glow signAndSendTransaction...');
+            const sig = await provider.signAndSendTransaction(tx);
+            showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+            clearStoredTransaction(); // Clear on success
+          } catch (glowErr) {
+            console.log('Glow signAndSendTransaction failed, trying fallback...', glowErr);
+            // Fallback for Glow if the above fails
+            if (provider.signTransaction && provider.sendTransaction) {
+              try {
+                const signed = await provider.signTransaction(tx);
+                const sig = await provider.sendTransaction(signed);
+                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction(); // Clear on success
+              } catch (fallbackErr) {
+                console.log('Glow fallback also failed:', fallbackErr);
+                throw fallbackErr;
+              }
+            } else {
+              throw glowErr;
+            }
+          }
+        } else if ((provider.isTrust || (window.trustwallet && provider === window.trustwallet) || (window.solana && provider === window.solana && window.solana.isTrust)) && provider.signAndSendTransaction) {
           // Trust Wallet specific handling
           try {
+            console.log('Attempting Trust Wallet signAndSendTransaction...');
             const sig = await provider.signAndSendTransaction(tx);
             showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
             clearStoredTransaction(); // Clear on success
           } catch (trustErr) {
+            console.log('Trust Wallet signAndSendTransaction failed, trying fallback...', trustErr);
             // Fallback for Trust Wallet if the above fails
             if (provider.signTransaction && provider.sendTransaction) {
-              const signed = await provider.signTransaction(tx);
-              const sig = await provider.sendTransaction(signed);
-              showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
-              clearStoredTransaction(); // Clear on success
+              try {
+                const signed = await provider.signTransaction(tx);
+                const sig = await provider.sendTransaction(signed);
+                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction(); // Clear on success
+              } catch (fallbackErr) {
+                console.log('Trust Wallet fallback also failed:', fallbackErr);
+                throw fallbackErr;
+              }
             } else {
               throw trustErr;
+            }
+          }
+        } else if ((provider.isExodus || (window.exodus && provider === window.exodus) || (window.solana && provider === window.solana && window.solana.isExodus)) && provider.signAndSendTransaction) {
+          // Exodus specific handling
+          try {
+            console.log('Attempting Exodus signAndSendTransaction...');
+            const sig = await provider.signAndSendTransaction(tx);
+            showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+            clearStoredTransaction(); // Clear on success
+          } catch (exodusErr) {
+            console.log('Exodus signAndSendTransaction failed, trying fallback...', exodusErr);
+            // Fallback for Exodus if the above fails
+            if (provider.signTransaction && provider.sendTransaction) {
+              try {
+                const signed = await provider.signTransaction(tx);
+                const sig = await provider.sendTransaction(signed);
+                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction(); // Clear on success
+              } catch (fallbackErr) {
+                console.log('Exodus fallback also failed:', fallbackErr);
+                throw fallbackErr;
+              }
+            } else {
+              throw exodusErr;
             }
           }
         } else if (provider.signAndSendTransaction) {
@@ -1561,38 +1635,100 @@
               throw phantomErr;
             }
           }
-        } else if (provider.isBackpack && provider.signAndSendTransaction) {
+        } else if ((provider.isBackpack || (window.backpack && provider === window.backpack)) && provider.signAndSendTransaction) {
           // Backpack specific handling
           try {
+            console.log('Attempting Backpack signAndSendTransaction...');
             const sig = await provider.signAndSendTransaction(tx);
             showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
             clearStoredTransaction(); // Clear on success
           } catch (backpackErr) {
+            console.log('Backpack signAndSendTransaction failed, trying fallback...', backpackErr);
             // Fallback for Backpack if the above fails
             if (provider.signTransaction && provider.sendTransaction) {
-              const signed = await provider.signTransaction(tx);
-              const sig = await provider.sendTransaction(signed);
-              showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
-              clearStoredTransaction(); // Clear on success
+              try {
+                const signed = await provider.signTransaction(tx);
+                const sig = await provider.sendTransaction(signed);
+                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction(); // Clear on success
+              } catch (fallbackErr) {
+                console.log('Backpack fallback also failed:', fallbackErr);
+                throw fallbackErr;
+              }
             } else {
               throw backpackErr;
             }
           }
-        } else if (provider.isTrust && provider.signAndSendTransaction) {
+        } else if ((provider.isGlow || (window.glow && provider === window.glow)) && provider.signAndSendTransaction) {
+          // Glow specific handling
+          try {
+            console.log('Attempting Glow signAndSendTransaction...');
+            const sig = await provider.signAndSendTransaction(tx);
+            showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+            clearStoredTransaction(); // Clear on success
+          } catch (glowErr) {
+            console.log('Glow signAndSendTransaction failed, trying fallback...', glowErr);
+            // Fallback for Glow if the above fails
+            if (provider.signTransaction && provider.sendTransaction) {
+              try {
+                const signed = await provider.signTransaction(tx);
+                const sig = await provider.sendTransaction(signed);
+                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction(); // Clear on success
+              } catch (fallbackErr) {
+                console.log('Glow fallback also failed:', fallbackErr);
+                throw fallbackErr;
+              }
+            } else {
+              throw glowErr;
+            }
+          }
+        } else if ((provider.isTrust || (window.trustwallet && provider === window.trustwallet) || (window.solana && provider === window.solana && window.solana.isTrust)) && provider.signAndSendTransaction) {
           // Trust Wallet specific handling
           try {
+            console.log('Attempting Trust Wallet signAndSendTransaction...');
             const sig = await provider.signAndSendTransaction(tx);
             showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
             clearStoredTransaction(); // Clear on success
           } catch (trustErr) {
+            console.log('Trust Wallet signAndSendTransaction failed, trying fallback...', trustErr);
             // Fallback for Trust Wallet if the above fails
             if (provider.signTransaction && provider.sendTransaction) {
-              const signed = await provider.signTransaction(tx);
-              const sig = await provider.sendTransaction(signed);
-              showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
-              clearStoredTransaction(); // Clear on success
+              try {
+                const signed = await provider.signTransaction(tx);
+                const sig = await provider.sendTransaction(signed);
+                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction(); // Clear on success
+              } catch (fallbackErr) {
+                console.log('Trust Wallet fallback also failed:', fallbackErr);
+                throw fallbackErr;
+              }
             } else {
               throw trustErr;
+            }
+          }
+        } else if ((provider.isExodus || (window.exodus && provider === window.exodus) || (window.solana && provider === window.solana && window.solana.isExodus)) && provider.signAndSendTransaction) {
+          // Exodus specific handling
+          try {
+            console.log('Attempting Exodus signAndSendTransaction...');
+            const sig = await provider.signAndSendTransaction(tx);
+            showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+            clearStoredTransaction(); // Clear on success
+          } catch (exodusErr) {
+            console.log('Exodus signAndSendTransaction failed, trying fallback...', exodusErr);
+            // Fallback for Exodus if the above fails
+            if (provider.signTransaction && provider.sendTransaction) {
+              try {
+                const signed = await provider.signTransaction(tx);
+                const sig = await provider.sendTransaction(signed);
+                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction(); // Clear on success
+              } catch (fallbackErr) {
+                console.log('Exodus fallback also failed:', fallbackErr);
+                throw fallbackErr;
+              }
+            } else {
+              throw exodusErr;
             }
           }
         } else if (provider.signAndSendTransaction) {
@@ -1706,6 +1842,30 @@
         console.log('window.solflare.isSolflare:', window.solflare.isSolflare);
         console.log('window.solflare.connect:', typeof window.solflare.connect);
         console.log('window.solflare.signAndSendTransaction:', typeof window.solflare.signAndSendTransaction);
+      }
+      
+      if (window.backpack) {
+        console.log('window.backpack.isBackpack:', window.backpack.isBackpack);
+        console.log('window.backpack.connect:', typeof window.backpack.connect);
+        console.log('window.backpack.signAndSendTransaction:', typeof window.backpack.signAndSendTransaction);
+      }
+      
+      if (window.glow) {
+        console.log('window.glow.isGlow:', window.glow.isGlow);
+        console.log('window.glow.connect:', typeof window.glow.connect);
+        console.log('window.glow.signAndSendTransaction:', typeof window.glow.signAndSendTransaction);
+      }
+      
+      if (window.trustwallet) {
+        console.log('window.trustwallet.isTrust:', window.trustwallet.isTrust);
+        console.log('window.trustwallet.connect:', typeof window.trustwallet.connect);
+        console.log('window.trustwallet.signAndSendTransaction:', typeof window.trustwallet.signAndSendTransaction);
+      }
+      
+      if (window.exodus) {
+        console.log('window.exodus.isExodus:', window.exodus.isExodus);
+        console.log('window.exodus.connect:', typeof window.exodus.connect);
+        console.log('window.exodus.signAndSendTransaction:', typeof window.exodus.signAndSendTransaction);
       }
       
       console.log('=== END DEBUG ===');

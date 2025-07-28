@@ -728,30 +728,87 @@
         }
       });
       
-      // Check for any object with connect method
-      const allObjects = [
-        window.solana,
-        window.phantom,
-        window.solflare,
-        window.backpack,
-        window.glow,
-        window.trustwallet,
-        window.exodus
-      ];
-      
-      allObjects.forEach((obj, index) => {
-        if (obj && typeof obj.connect === 'function') {
-          const names = ['solana', 'phantom', 'solflare', 'backpack', 'glow', 'trustwallet', 'exodus'];
-          console.log(`Found connect method in: ${names[index]}`, obj);
-          detectedWallets.push(names[index]);
-        }
-      });
-      
       console.log('Detected wallets:', detectedWallets);
       console.log('=== END FORCE DETECTION ===');
       
       return detectedWallets;
     }
+
+    // Wallet definitions - all supported wallets
+    const WALLET_DEFS = [
+      {
+        key: 'phantom',
+        name: 'Phantom',
+        icon: '/assets/phantom-logo.svg',
+        provider: () => window.phantom?.solana || window.solana,
+        install: 'https://phantom.app/',
+        mobile: {
+          appStore: 'https://apps.apple.com/app/phantom-crypto-wallet/id1598432977',
+          playStore: 'https://play.google.com/store/apps/details?id=app.phantom',
+          deepLink: 'https://phantom.app/ul/browse/'
+        }
+      },
+      {
+        key: 'solflare',
+        name: 'Solflare',
+        icon: 'https://solflare.com/assets/logo.svg',
+        provider: () => window.solflare,
+        install: 'https://solflare.com/',
+        mobile: {
+          appStore: 'https://apps.apple.com/app/solflare/id1580902717',
+          playStore: 'https://play.google.com/store/apps/details?id=com.solflare.mobile',
+          deepLink: 'https://solflare.com/ul/browse/'
+        }
+      },
+      {
+        key: 'backpack',
+        name: 'Backpack',
+        icon: 'https://backpack.app/assets/logo.svg',
+        provider: () => window.backpack,
+        install: 'https://backpack.app/',
+        mobile: {
+          appStore: 'https://apps.apple.com/app/backpack-wallet/id6446591340',
+          playStore: 'https://play.google.com/store/apps/details?id=app.backpack',
+          deepLink: 'https://backpack.app/ul/browse/'
+        }
+      },
+      {
+        key: 'glow',
+        name: 'Glow',
+        icon: 'https://glow.app/assets/logo.svg',
+        provider: () => window.glow,
+        install: 'https://glow.app/',
+        mobile: {
+          appStore: 'https://apps.apple.com/app/glow-wallet/id1635717553',
+          playStore: 'https://play.google.com/store/apps/details?id=com.glow.wallet',
+          deepLink: 'https://glow.app/ul/browse/'
+        }
+      },
+      {
+        key: 'trustwallet',
+        name: 'Trust Wallet',
+        icon: 'https://trustwallet.com/assets/images/media/assets/logo.png',
+        provider: () => window.trustwallet?.solana || window.trustwallet,
+        install: 'https://trustwallet.com/',
+        mobile: {
+          appStore: 'https://apps.apple.com/app/trust-crypto-bitcoin-wallet/id1288339409',
+          playStore: 'https://play.google.com/store/apps/details?id=com.wallet.crypto.trustapp',
+          deepLink: 'https://link.trustwallet.com/open_url?coin_id=501&url='
+        }
+      },
+      {
+        key: 'exodus',
+        name: 'Exodus',
+        icon: 'https://exodus.com/assets/images/logo.svg',
+        provider: () => window.exodus,
+        install: 'https://exodus.com/',
+        mobile: {
+          appStore: 'https://apps.apple.com/app/exodus-crypto-bitcoin-wallet/id1414384820',
+          playStore: 'https://play.google.com/store/apps/details?id=exodusmovement.exodus',
+          deepLink: 'https://exodus.com/ul/browse/'
+        }
+      }
+    ];
 
     // Simplified mobile wallet connection - direct approach
     async function connectMobileWallet(wallet) {

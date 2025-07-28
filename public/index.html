@@ -586,6 +586,8 @@
           if (window.phantom?.solana) return window.phantom.solana;
           // Check for Phantom's specific properties
           if (window.solana && typeof window.solana.connect === 'function' && window.solana.isPhantom) return window.solana;
+          // Additional Phantom detection
+          if (window.solana && window.solana.isPhantom !== undefined) return window.solana;
           return null;
         }, 
         install: 'https://phantom.app/download',
@@ -605,6 +607,9 @@
           if (window.solana?.isSolflare) return window.solana;
           // Check for Solflare's specific properties
           if (window.solflare && typeof window.solflare.connect === 'function') return window.solflare;
+          // Additional Solflare detection
+          if (window.solflare && window.solflare.isSolflare !== undefined) return window.solflare;
+          if (window.solana && window.solana.isSolflare !== undefined) return window.solana;
           return null;
         }, 
         install: 'https://solflare.com/download',
@@ -836,8 +841,10 @@
         `<h2 style="margin-bottom: 10px;">Select Wallet</h2>
          <p style="color:#00FF88;font-size:0.9em;margin-bottom:20px;">
            📱 Mobile detected (${platform.toUpperCase()}) - Tap to open app or install
-         </p>` : 
-        `<h2 style="margin-bottom: 20px;">Select Wallet</h2>`;
+         </p>
+         <button onclick="debugWalletDetection()" style="background:#333;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:0.8em;margin-bottom:10px;cursor:pointer;">🔍 Debug Wallets</button>` : 
+        `<h2 style="margin-bottom: 20px;">Select Wallet</h2>
+         <button onclick="debugWalletDetection()" style="background:#333;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:0.8em;margin-bottom:10px;cursor:pointer;">🔍 Debug Wallets</button>`;
       
       list.innerHTML = mobileHeader;
       
@@ -1218,36 +1225,50 @@
           const sig = await provider.signAndSendTransaction({ transactionBase64: data.transaction });
           showStatus("Transaction sent successfully! Signature: " + (sig.signature || sig), 'success');
           clearStoredTransaction();
-        } else if (provider.isSolflare && provider.signAndSendTransaction) {
+        } else if ((provider.isSolflare || (window.solflare && provider === window.solflare)) && provider.signAndSendTransaction) {
           // Solflare specific handling
           try {
+            console.log('Attempting Solflare signAndSendTransaction...');
             const sig = await provider.signAndSendTransaction(tx);
             showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
             clearStoredTransaction(); // Clear on success
           } catch (solflareErr) {
+            console.log('Solflare signAndSendTransaction failed, trying fallback...', solflareErr);
             // Fallback for Solflare if the above fails
             if (provider.signTransaction && provider.sendTransaction) {
-              const signed = await provider.signTransaction(tx);
-              const sig = await provider.sendTransaction(signed);
-              showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
-              clearStoredTransaction(); // Clear on success
+              try {
+                const signed = await provider.signTransaction(tx);
+                const sig = await provider.sendTransaction(signed);
+                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction(); // Clear on success
+              } catch (fallbackErr) {
+                console.log('Solflare fallback also failed:', fallbackErr);
+                throw fallbackErr;
+              }
             } else {
               throw solflareErr;
             }
           }
-        } else if (provider.isPhantom && provider.signAndSendTransaction) {
+        } else if ((provider.isPhantom || (window.solana && provider === window.solana && window.solana.isPhantom)) && provider.signAndSendTransaction) {
           // Phantom specific handling
           try {
+            console.log('Attempting Phantom signAndSendTransaction...');
             const sig = await provider.signAndSendTransaction(tx);
             showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
             clearStoredTransaction(); // Clear on success
           } catch (phantomErr) {
+            console.log('Phantom signAndSendTransaction failed, trying fallback...', phantomErr);
             // Fallback for Phantom if the above fails
             if (provider.signTransaction && provider.sendTransaction) {
-              const signed = await provider.signTransaction(tx);
-              const sig = await provider.sendTransaction(signed);
-              showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
-              clearStoredTransaction(); // Clear on success
+              try {
+                const signed = await provider.signTransaction(tx);
+                const sig = await provider.sendTransaction(signed);
+                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction(); // Clear on success
+              } catch (fallbackErr) {
+                console.log('Phantom fallback also failed:', fallbackErr);
+                throw fallbackErr;
+              }
             } else {
               throw phantomErr;
             }
@@ -1288,11 +1309,13 @@
           }
         } else if (provider.signAndSendTransaction) {
           // Generic signAndSendTransaction for other wallets
+          console.log('Attempting generic signAndSendTransaction...');
           const sig = await provider.signAndSendTransaction(tx);
           showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
                 clearStoredTransaction(); // Clear on success
         } else if (provider.signTransaction && provider.sendTransaction) {
           // Fallback: sign and send separately
+          console.log('Attempting signTransaction + sendTransaction fallback...');
           const signed = await provider.signTransaction(tx);
           const sig = await provider.sendTransaction(signed);
           showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
@@ -1302,6 +1325,7 @@
           showStatus("Transaction signed! (You need to send it to the network)", 'success');
                 clearStoredTransaction(); // Clear on success
         } else {
+          console.log('No transaction signing method found for provider:', provider);
           throw new Error("Wallet does not support transaction signing.");
         }
       } catch (err) {
@@ -1489,36 +1513,50 @@
           const sig = await provider.signAndSendTransaction({ transactionBase64: data.transaction });
           showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
                 clearStoredTransaction(); // Clear on success
-        } else if (provider.isSolflare && provider.signAndSendTransaction) {
+        } else if ((provider.isSolflare || (window.solflare && provider === window.solflare)) && provider.signAndSendTransaction) {
           // Solflare specific handling
           try {
+            console.log('Attempting Solflare signAndSendTransaction...');
             const sig = await provider.signAndSendTransaction(tx);
             showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
             clearStoredTransaction(); // Clear on success
           } catch (solflareErr) {
+            console.log('Solflare signAndSendTransaction failed, trying fallback...', solflareErr);
             // Fallback for Solflare if the above fails
             if (provider.signTransaction && provider.sendTransaction) {
-              const signed = await provider.signTransaction(tx);
-              const sig = await provider.sendTransaction(signed);
-              showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
-              clearStoredTransaction(); // Clear on success
+              try {
+                const signed = await provider.signTransaction(tx);
+                const sig = await provider.sendTransaction(signed);
+                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction(); // Clear on success
+              } catch (fallbackErr) {
+                console.log('Solflare fallback also failed:', fallbackErr);
+                throw fallbackErr;
+              }
             } else {
               throw solflareErr;
             }
           }
-        } else if (provider.isPhantom && provider.signAndSendTransaction) {
+        } else if ((provider.isPhantom || (window.solana && provider === window.solana && window.solana.isPhantom)) && provider.signAndSendTransaction) {
           // Phantom specific handling
           try {
+            console.log('Attempting Phantom signAndSendTransaction...');
             const sig = await provider.signAndSendTransaction(tx);
             showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
             clearStoredTransaction(); // Clear on success
           } catch (phantomErr) {
+            console.log('Phantom signAndSendTransaction failed, trying fallback...', phantomErr);
             // Fallback for Phantom if the above fails
             if (provider.signTransaction && provider.sendTransaction) {
-              const signed = await provider.signTransaction(tx);
-              const sig = await provider.sendTransaction(signed);
-              showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
-              clearStoredTransaction(); // Clear on success
+              try {
+                const signed = await provider.signTransaction(tx);
+                const sig = await provider.sendTransaction(signed);
+                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction(); // Clear on success
+              } catch (fallbackErr) {
+                console.log('Phantom fallback also failed:', fallbackErr);
+                throw fallbackErr;
+              }
             } else {
               throw phantomErr;
             }
@@ -1559,11 +1597,13 @@
           }
         } else if (provider.signAndSendTransaction) {
           // Generic signAndSendTransaction for other wallets
+          console.log('Attempting generic signAndSendTransaction...');
           const sig = await provider.signAndSendTransaction(tx);
           showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
                 clearStoredTransaction(); // Clear on success
         } else if (provider.signTransaction && provider.sendTransaction) {
           // Fallback: sign and send separately
+          console.log('Attempting signTransaction + sendTransaction fallback...');
           const signed = await provider.signTransaction(tx);
           const sig = await provider.sendTransaction(signed);
           showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
@@ -1573,6 +1613,7 @@
           showStatus("Transaction signed! (You need to send it to the network)", 'success');
                 clearStoredTransaction(); // Clear on success
         } else {
+          console.log('No transaction signing method found for provider:', provider);
           throw new Error("Wallet does not support transaction signing.");
         }
               resolve();
@@ -1611,6 +1652,7 @@
     // Check for pending transactions on page load
     document.addEventListener('DOMContentLoaded', function() {
       checkPendingTransactions();
+      debugWalletDetection(); // Add debug info
     });
     // --- Navbar Active Link on Scroll ---
     const navLinks = document.querySelectorAll('.nav-link');
@@ -1637,6 +1679,37 @@
         }
       });
     });
+
+    // Debug function to help identify wallet issues
+    function debugWalletDetection() {
+      console.log('=== WALLET DETECTION DEBUG ===');
+      console.log('window.solana:', window.solana);
+      console.log('window.solflare:', window.solflare);
+      console.log('window.phantom:', window.phantom);
+      console.log('window.backpack:', window.backpack);
+      console.log('window.glow:', window.glow);
+      console.log('window.trustwallet:', window.trustwallet);
+      console.log('window.exodus:', window.exodus);
+      
+      if (window.solana) {
+        console.log('window.solana.isPhantom:', window.solana.isPhantom);
+        console.log('window.solana.isSolflare:', window.solana.isSolflare);
+        console.log('window.solana.isBackpack:', window.solana.isBackpack);
+        console.log('window.solana.isGlow:', window.solana.isGlow);
+        console.log('window.solana.isTrust:', window.solana.isTrust);
+        console.log('window.solana.isExodus:', window.solana.isExodus);
+        console.log('window.solana.connect:', typeof window.solana.connect);
+        console.log('window.solana.signAndSendTransaction:', typeof window.solana.signAndSendTransaction);
+      }
+      
+      if (window.solflare) {
+        console.log('window.solflare.isSolflare:', window.solflare.isSolflare);
+        console.log('window.solflare.connect:', typeof window.solflare.connect);
+        console.log('window.solflare.signAndSendTransaction:', typeof window.solflare.signAndSendTransaction);
+      }
+      
+      console.log('=== END DEBUG ===');
+    }
   </script>
 </body>
 </html>

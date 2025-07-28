@@ -904,6 +904,62 @@
       }
     }
 
+    // Debug function to check all wallet objects
+    function debugAllWallets() {
+      console.log('=== DEBUGGING ALL WALLETS ===');
+      
+      const debugInfo = {
+        userAgent: navigator.userAgent,
+        isMobile: isMobile(),
+        platform: getMobilePlatform(),
+        windowObjects: {}
+      };
+      
+      // Check all possible wallet objects
+      const walletObjects = [
+        'window.solana',
+        'window.phantom',
+        'window.solflare',
+        'window.backpack',
+        'window.glow',
+        'window.trustwallet',
+        'window.exodus'
+      ];
+      
+      walletObjects.forEach(objPath => {
+        try {
+          const obj = eval(objPath);
+          debugInfo.windowObjects[objPath] = {
+            exists: !!obj,
+            type: typeof obj,
+            hasConnect: obj && typeof obj.connect === 'function',
+            hasPublicKey: obj && (obj.publicKey || obj.address)
+          };
+        } catch (e) {
+          debugInfo.windowObjects[objPath] = {
+            exists: false,
+            error: e.message
+          };
+        }
+      });
+      
+      console.log('Debug info:', debugInfo);
+      
+      // Show debug info in modal
+      const debugText = `
+        Mobile: ${debugInfo.isMobile}
+        Platform: ${debugInfo.platform}
+        User Agent: ${debugInfo.userAgent.substring(0, 100)}...
+        
+        Wallet Objects:
+        ${Object.entries(debugInfo.windowObjects).map(([key, value]) => 
+          `${key}: ${value.exists ? 'Found' : 'Not found'}`
+        ).join('\n')}
+      `;
+      
+      showStatus(debugText, 'info');
+    }
+
     // Desktop wallet modal function - ensures desktop functionality remains intact
     function openWalletModal() {
       const modal = document.getElementById("walletModal");
@@ -922,9 +978,6 @@
       
       list.innerHTML = header;
       
-      // Get detected wallets for better status display
-      const detectedWallets = detectMobileWallets();
-      
       WALLET_DEFS.forEach(wallet => {
         const provider = wallet.provider();
         const option = document.createElement("div");
@@ -936,11 +989,8 @@
         // Show status based on device and provider availability
         let statusText = '';
         if (isMobileDevice) {
-          // Enhanced mobile wallet detection
-          const isDetected = detectedWallets.includes(wallet.key);
-          statusText = isDetected ? 
-            '<span style="color:#00FF88;font-size:0.9em;">📱 Detected</span>' : 
-            '<span style="color:#FFD700;font-size:0.9em;">📱 Install</span>';
+          // On mobile, assume wallet is available
+          statusText = '<span style="color:#00FF88;font-size:0.9em;">📱 Available</span>';
         } else {
           statusText = provider ? '' : '<span style="color:#FF4D4D;font-size:0.9em;">Not installed</span>';
         }

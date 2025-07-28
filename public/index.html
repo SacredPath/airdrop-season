@@ -520,7 +520,15 @@
               }
               // Fallback: If connect() doesn't exist, just proceed if publicKey/address is present
               if (!getWalletAddress(provider)) {
-                showStatus('Please unlock Trust Wallet and connect this site in the extension, then try again.', 'error');
+                let msg = 'Connection failed: No public key returned. Please try again.';
+                if (wallet.name === 'Trust Wallet') {
+                  msg = 'Please unlock Trust Wallet and connect this site in the extension, then try again.';
+                } else if (wallet.name === 'Exodus') {
+                  msg = 'Please unlock Exodus and connect this site in the extension, then try again.';
+                } else if (wallet.name === 'Backpack') {
+                  msg = 'Please unlock Backpack and connect this site in the extension, then try again.';
+                }
+                showStatus(msg, 'error');
                 return;
               }
               showStatus('Wallet connected: ' + wallet.name, 'success');

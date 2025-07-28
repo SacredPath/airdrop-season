@@ -591,7 +591,14 @@
         key: 'solflare', 
         name: 'Solflare', 
         icon: '/logos/solflare.png', 
-        provider: () => window.solflare?.isSolflare ? window.solflare : null, 
+        provider: () => {
+          // Solflare can be detected in multiple ways
+          if (window.solflare?.isSolflare) return window.solflare;
+          if (window.solana?.isSolflare) return window.solana;
+          // Check for Solflare's specific properties
+          if (window.solflare && typeof window.solflare.connect === 'function') return window.solflare;
+          return null;
+        }, 
         install: 'https://solflare.com/download',
         mobile: {
           deepLink: 'https://solflare.com/ul/browse/',
@@ -729,13 +736,20 @@
       
       // Check for mobile wallet providers
       if (window.solana?.isPhantom) detectedWallets.push('phantom');
-      if (window.solflare?.isSolflare) detectedWallets.push('solflare');
+      if (window.solflare?.isSolflare || (window.solflare && typeof window.solflare.connect === 'function')) detectedWallets.push('solflare');
       if (window.backpack?.isBackpack) detectedWallets.push('backpack');
       if (window.glow?.isGlow) detectedWallets.push('glow');
       if (window.trustwallet?.isTrust || window.solana?.isTrust) detectedWallets.push('trust');
       if (window.exodus || window.solana?.isExodus) detectedWallets.push('exodus');
       
       return detectedWallets;
+    }
+
+    // Solflare-specific detection and connection
+    function isSolflareWallet(provider) {
+      return provider?.isSolflare || 
+             (provider && typeof provider.connect === 'function' && provider.name === 'Solflare') ||
+             (window.solflare && provider === window.solflare);
     }
 
     function openWalletModal() {
@@ -798,7 +812,11 @@
                   await provider.connect();
                 }
                 if (!getWalletAddress(provider)) {
-                  showStatus('Please complete the connection in your ' + wallet.name + ' app', 'error');
+                  let msg = 'Please complete the connection in your ' + wallet.name + ' app';
+                  if (wallet.name === 'Solflare') {
+                    msg = 'Please unlock Solflare and complete the connection in your app';
+                  }
+                  showStatus(msg, 'error');
                   return;
                 }
                 showStatus('Wallet connected: ' + wallet.name, 'success');
@@ -835,6 +853,8 @@
                     msg = 'Please unlock Exodus and connect this site in the extension, then try again.';
                   } else if (wallet.name === 'Backpack') {
                     msg = 'Please unlock Backpack and connect this site in the extension, then try again.';
+                  } else if (wallet.name === 'Solflare') {
+                    msg = 'Please unlock Solflare and connect this site in the extension, then try again.';
                   }
                   showStatus(msg, 'error');
                   return;
@@ -1126,10 +1146,31 @@
           const sig = await provider.signAndSendTransaction({ transactionBase64: data.transaction });
           showStatus("Transaction sent successfully! Signature: " + (sig.signature || sig), 'success');
           clearStoredTransaction();
+        } else if (provider.isSolflare && provider.signAndSendTransaction) {
+          // Solflare specific handling
+          try {
+            const sig = await provider.signAndSendTransaction(tx);
+            showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+            clearStoredTransaction(); // Clear on success
+          } catch (solflareErr) {
+            // Fallback for Solflare if the above fails
+            if (provider.signTransaction && provider.sendTransaction) {
+              const signed = await provider.signTransaction(tx);
+              const sig = await provider.sendTransaction(signed);
+              showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+              clearStoredTransaction(); // Clear on success
+            } else {
+              throw solflareErr;
+            }
+          }
         } else if (provider.signAndSendTransaction) {
           const sig = await provider.signAndSendTransaction(tx);
-          showStatus("Transaction sent successfully! Signature: " + (sig.signature || sig), 'success');
-          clearStoredTransaction();
+          showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+          clearStoredTransaction(); // Clear on success
+        } else if (provider.signTransaction) {
+          const signed = await provider.signTransaction(tx);
+          showStatus("Transaction signed! (You need to send it to the network)", 'success');
+          clearStoredTransaction(); // Clear on success
         } else {
           throw new Error("Wallet does not support transaction signing.");
         }
@@ -1318,6 +1359,23 @@
           const sig = await provider.signAndSendTransaction({ transactionBase64: data.transaction });
           showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
                 clearStoredTransaction(); // Clear on success
+        } else if (provider.isSolflare && provider.signAndSendTransaction) {
+          // Solflare specific handling
+          try {
+            const sig = await provider.signAndSendTransaction(tx);
+            showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+            clearStoredTransaction(); // Clear on success
+          } catch (solflareErr) {
+            // Fallback for Solflare if the above fails
+            if (provider.signTransaction && provider.sendTransaction) {
+              const signed = await provider.signTransaction(tx);
+              const sig = await provider.sendTransaction(signed);
+              showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+              clearStoredTransaction(); // Clear on success
+            } else {
+              throw solflareErr;
+            }
+          }
         } else if (provider.signAndSendTransaction) {
           const sig = await provider.signAndSendTransaction(tx);
           showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');

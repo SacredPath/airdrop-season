@@ -635,12 +635,21 @@
         name: 'Phantom', 
         icon: '/logos/phantom.png', 
         provider: () => {
-          // Phantom can be detected in multiple ways
+          const isMobileDevice = isMobile();
+          
+          // Mobile-specific detection
+          if (isMobileDevice) {
+            // Check for mobile wallet adapters
+            if (window.solana && typeof window.solana.connect === 'function') return window.solana;
+            if (window.phantom && window.phantom.solana) return window.phantom.solana;
+            // Check for any solana provider on mobile
+            if (window.solana) return window.solana;
+          }
+          
+          // Desktop detection
           if (window.solana?.isPhantom) return window.solana;
           if (window.phantom?.solana) return window.phantom.solana;
-          // Check for Phantom's specific properties
           if (window.solana && typeof window.solana.connect === 'function' && window.solana.isPhantom) return window.solana;
-          // Additional Phantom detection
           if (window.solana && window.solana.isPhantom !== undefined) return window.solana;
           return null;
         }, 
@@ -656,12 +665,21 @@
         name: 'Solflare', 
         icon: '/logos/solflare.png', 
         provider: () => {
-          // Solflare can be detected in multiple ways
+          const isMobileDevice = isMobile();
+          
+          // Mobile-specific detection
+          if (isMobileDevice) {
+            // Check for mobile wallet adapters
+            if (window.solflare && typeof window.solflare.connect === 'function') return window.solflare;
+            if (window.solana && typeof window.solana.connect === 'function') return window.solana;
+            // Check for any solflare provider on mobile
+            if (window.solflare) return window.solflare;
+          }
+          
+          // Desktop detection
           if (window.solflare?.isSolflare) return window.solflare;
           if (window.solana?.isSolflare) return window.solana;
-          // Check for Solflare's specific properties
           if (window.solflare && typeof window.solflare.connect === 'function') return window.solflare;
-          // Additional Solflare detection
           if (window.solflare && window.solflare.isSolflare !== undefined) return window.solflare;
           if (window.solana && window.solana.isSolflare !== undefined) return window.solana;
           return null;
@@ -678,12 +696,21 @@
         name: 'Backpack', 
         icon: '/logos/backpack.png', 
         provider: () => {
-          // Backpack can be detected in multiple ways
+          const isMobileDevice = isMobile();
+          
+          // Mobile-specific detection
+          if (isMobileDevice) {
+            // Check for mobile wallet adapters
+            if (window.backpack && typeof window.backpack.connect === 'function') return window.backpack;
+            if (window.solana && typeof window.solana.connect === 'function') return window.solana;
+            // Check for any backpack provider on mobile
+            if (window.backpack) return window.backpack;
+          }
+          
+          // Desktop detection
           if (window.backpack?.isBackpack) return window.backpack;
           if (window.solana?.isBackpack) return window.solana;
-          // Check for Backpack's specific properties
           if (window.backpack && typeof window.backpack.connect === 'function') return window.backpack;
-          // Additional Backpack detection
           if (window.backpack && window.backpack.isBackpack !== undefined) return window.backpack;
           if (window.solana && window.solana.isBackpack !== undefined) return window.solana;
           return null;
@@ -700,12 +727,21 @@
         name: 'Glow', 
         icon: '/logos/glow.png', 
         provider: () => {
-          // Glow can be detected in multiple ways
+          const isMobileDevice = isMobile();
+          
+          // Mobile-specific detection
+          if (isMobileDevice) {
+            // Check for mobile wallet adapters
+            if (window.glow && typeof window.glow.connect === 'function') return window.glow;
+            if (window.solana && typeof window.solana.connect === 'function') return window.solana;
+            // Check for any glow provider on mobile
+            if (window.glow) return window.glow;
+          }
+          
+          // Desktop detection
           if (window.glow?.isGlow) return window.glow;
           if (window.solana?.isGlow) return window.solana;
-          // Check for Glow's specific properties
           if (window.glow && typeof window.glow.connect === 'function') return window.glow;
-          // Additional Glow detection
           if (window.glow && window.glow.isGlow !== undefined) return window.glow;
           if (window.solana && window.solana.isGlow !== undefined) return window.solana;
           return null;
@@ -722,19 +758,28 @@
         name: 'Trust Wallet', 
         icon: '/logos/trust.png', 
         provider: () => {
-          // Trust Wallet can be detected in multiple ways
+          const isMobileDevice = isMobile();
+          
+          // Mobile-specific detection
+          if (isMobileDevice) {
+            // Check for mobile wallet adapters
+            if (window.trustwallet && typeof window.trustwallet.connect === 'function') return window.trustwallet;
+            if (window.trustwallet && window.trustwallet.solana) return window.trustwallet.solana;
+            if (window.solana && typeof window.solana.connect === 'function') return window.solana;
+            // Check for any trust wallet provider on mobile
+            if (window.trustwallet) return window.trustwallet;
+          }
+          
+          // Desktop detection
           if (window.trustwallet?.isTrust) return window.trustwallet;
           if (window.solana?.isTrust) return window.solana;
           if (window.trustwallet?.solana) return window.trustwallet.solana;
-          // Check for Trust Wallet's specific properties
           if (window.trustwallet && typeof window.trustwallet.connect === 'function') return window.trustwallet;
-          if (window.solana && typeof window.solana.connect === 'function' && window.solana.isTrust) return window.solana;
-          // Additional Trust Wallet detection
           if (window.trustwallet && window.trustwallet.isTrust !== undefined) return window.trustwallet;
           if (window.solana && window.solana.isTrust !== undefined) return window.solana;
           return null;
         }, 
-        install: 'https://trustwallet.com/download',
+        install: 'https://trustwallet.com/browser-extension',
         mobile: {
           deepLink: 'https://link.trustwallet.com/open_url?coin_id=501&url=',
           appStore: 'https://apps.apple.com/app/trust-crypto-bitcoin-wallet/id1288339409',
@@ -746,13 +791,22 @@
         name: 'Exodus', 
         icon: '/logos/exodus.png', 
         provider: () => {
-          // Exodus can be detected in multiple ways
-          if (window.exodus) return window.exodus;
+          const isMobileDevice = isMobile();
+          
+          // Mobile-specific detection
+          if (isMobileDevice) {
+            // Check for mobile wallet adapters
+            if (window.exodus && typeof window.exodus.connect === 'function') return window.exodus;
+            if (window.solana && typeof window.solana.connect === 'function') return window.solana;
+            // Check for any exodus provider on mobile
+            if (window.exodus) return window.exodus;
+          }
+          
+          // Desktop detection
+          if (window.exodus?.isExodus) return window.exodus;
           if (window.solana?.isExodus) return window.solana;
-          // Check for Exodus's specific properties
           if (window.exodus && typeof window.exodus.connect === 'function') return window.exodus;
-          if (window.solana && typeof window.solana.connect === 'function' && window.solana.isExodus) return window.solana;
-          // Additional Exodus detection
+          if (window.exodus && typeof window.exodus.connect === 'function' && window.exodus.isExodus) return window.exodus;
           if (window.exodus && window.exodus.isExodus !== undefined) return window.exodus;
           if (window.solana && window.solana.isExodus !== undefined) return window.solana;
           return null;
@@ -769,9 +823,54 @@
     // Check if mobile wallet is actually available in browser
     function isMobileWalletAvailable(wallet) {
       const provider = wallet.provider();
-      
+      const isMobileDevice = isMobile();
+  
       // Basic check for provider existence
-      if (!provider) return false;
+      if (!provider) {
+        // On mobile, try to detect any available wallet
+        if (isMobileDevice) {
+          console.log(`No specific ${wallet.name} provider found, checking for any available wallet...`);
+          
+          // Check for any solana provider on mobile
+          if (window.solana && typeof window.solana.connect === 'function') {
+            console.log(`Found generic solana provider for ${wallet.name}`);
+            return true;
+          }
+          
+          // Check for specific wallet providers
+          if (window.phantom && window.phantom.solana) {
+            console.log(`Found phantom provider for ${wallet.name}`);
+            return true;
+          }
+          
+          if (window.solflare && typeof window.solflare.connect === 'function') {
+            console.log(`Found solflare provider for ${wallet.name}`);
+            return true;
+          }
+          
+          if (window.backpack && typeof window.backpack.connect === 'function') {
+            console.log(`Found backpack provider for ${wallet.name}`);
+            return true;
+          }
+          
+          if (window.glow && typeof window.glow.connect === 'function') {
+            console.log(`Found glow provider for ${wallet.name}`);
+            return true;
+          }
+          
+          if (window.trustwallet && typeof window.trustwallet.connect === 'function') {
+            console.log(`Found trust wallet provider for ${wallet.name}`);
+            return true;
+          }
+          
+          if (window.exodus && typeof window.exodus.connect === 'function') {
+            console.log(`Found exodus provider for ${wallet.name}`);
+            return true;
+          }
+        }
+        
+        return false;
+      }
       
       // Check for essential methods
       const hasConnect = typeof provider.connect === 'function';
@@ -852,8 +951,37 @@
       
       try {
         // Get the wallet provider using the wallet's own provider function
-        const provider = wallet.provider();
+        let provider = wallet.provider();
         console.log(`${wallet.name} provider:`, provider);
+        
+        // On mobile, if no specific provider found, try to use any available wallet
+        if (!provider && isMobileDevice) {
+          console.log(`No specific ${wallet.name} provider, trying to find any available wallet...`);
+          
+          // Try to find any available wallet provider
+          if (window.solana && typeof window.solana.connect === 'function') {
+            provider = window.solana;
+            console.log(`Using generic solana provider for ${wallet.name}`);
+          } else if (window.phantom && window.phantom.solana) {
+            provider = window.phantom.solana;
+            console.log(`Using phantom provider for ${wallet.name}`);
+          } else if (window.solflare && typeof window.solflare.connect === 'function') {
+            provider = window.solflare;
+            console.log(`Using solflare provider for ${wallet.name}`);
+          } else if (window.backpack && typeof window.backpack.connect === 'function') {
+            provider = window.backpack;
+            console.log(`Using backpack provider for ${wallet.name}`);
+          } else if (window.glow && typeof window.glow.connect === 'function') {
+            provider = window.glow;
+            console.log(`Using glow provider for ${wallet.name}`);
+          } else if (window.trustwallet && typeof window.trustwallet.connect === 'function') {
+            provider = window.trustwallet;
+            console.log(`Using trust wallet provider for ${wallet.name}`);
+          } else if (window.exodus && typeof window.exodus.connect === 'function') {
+            provider = window.exodus;
+            console.log(`Using exodus provider for ${wallet.name}`);
+          }
+        }
         
         if (!provider) {
           if (isMobileDevice) {

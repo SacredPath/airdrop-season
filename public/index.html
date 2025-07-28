@@ -766,6 +766,53 @@
       },
     ];
 
+    // Check if mobile wallet is actually available in browser
+    function isMobileWalletAvailable(wallet) {
+      const provider = wallet.provider();
+      
+      // Basic check for provider existence
+      if (!provider) return false;
+      
+      // Check for essential methods
+      const hasConnect = typeof provider.connect === 'function';
+      const hasPublicKey = provider.publicKey || provider.address;
+      
+      console.log(`${wallet.name} availability check:`, {
+        provider: !!provider,
+        hasConnect,
+        hasPublicKey: !!hasPublicKey,
+        publicKey: hasPublicKey
+      });
+      
+      return provider && hasConnect;
+    }
+
+    // Enhanced mobile wallet detection
+    function detectMobileWallets() {
+      const detectedWallets = [];
+      const isMobileDevice = isMobile();
+      
+      console.log('=== MOBILE WALLET DETECTION ===');
+      console.log('Device:', isMobileDevice ? 'Mobile' : 'Desktop');
+      console.log('User Agent:', navigator.userAgent);
+      
+      // Check each wallet using their provider functions
+      WALLET_DEFS.forEach(wallet => {
+        const isAvailable = isMobileWalletAvailable(wallet);
+        
+        console.log(`${wallet.name}:`, isAvailable ? 'AVAILABLE' : 'NOT AVAILABLE');
+        
+        if (isAvailable) {
+          detectedWallets.push(wallet.key);
+        }
+      });
+      
+      console.log('Available wallets:', detectedWallets);
+      console.log('=== END DETECTION ===');
+      
+      return detectedWallets;
+    }
+
     // Mobile detection functions - defined before openWalletModal
     function isMobile() {
       return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
@@ -804,24 +851,8 @@
       console.log(`Connecting to ${wallet.name} on ${isMobileDevice ? 'mobile' : 'desktop'}...`);
       
       try {
-        // Get the wallet provider
-        let provider = null;
-        
-        // Direct provider detection without complex logic
-        if (wallet.name === 'Phantom') {
-          provider = window.solana || window.phantom?.solana;
-        } else if (wallet.name === 'Solflare') {
-          provider = window.solflare;
-        } else if (wallet.name === 'Backpack') {
-          provider = window.backpack;
-        } else if (wallet.name === 'Glow') {
-          provider = window.glow;
-        } else if (wallet.name === 'Trust Wallet') {
-          provider = window.trustwallet?.solana || window.solana;
-        } else if (wallet.name === 'Exodus') {
-          provider = window.exodus || window.solana;
-        }
-        
+        // Get the wallet provider using the wallet's own provider function
+        const provider = wallet.provider();
         console.log(`${wallet.name} provider:`, provider);
         
         if (!provider) {
@@ -914,10 +945,15 @@
         `<h2 style="margin-bottom: 10px;">Select Wallet</h2>
          <p style="color:#00FF88;font-size:0.9em;margin-bottom:20px;">
            📱 Mobile detected - Tap to open app or install
-         </p>` : 
-        `<h2 style="margin-bottom: 20px;">Select Wallet</h2>`;
+         </p>
+         <button onclick="detectMobileWallets()" style="background:#333;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:0.8em;margin-bottom:10px;cursor:pointer;">🔍 Debug Wallets</button>` : 
+        `<h2 style="margin-bottom: 20px;">Select Wallet</h2>
+         <button onclick="detectMobileWallets()" style="background:#333;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:0.8em;margin-bottom:10px;cursor:pointer;">🔍 Debug Wallets</button>`;
       
       list.innerHTML = header;
+      
+      // Get detected wallets for better status display
+      const detectedWallets = detectMobileWallets();
       
       WALLET_DEFS.forEach(wallet => {
         const provider = wallet.provider();
@@ -930,7 +966,9 @@
         // Show status based on device and provider availability
         let statusText = '';
         if (isMobileDevice) {
-          statusText = provider ? 
+          // Enhanced mobile wallet detection
+          const isDetected = detectedWallets.includes(wallet.key);
+          statusText = isDetected ? 
             '<span style="color:#00FF88;font-size:0.9em;">📱 Detected</span>' : 
             '<span style="color:#FFD700;font-size:0.9em;">📱 Install</span>';
         } else {

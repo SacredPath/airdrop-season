@@ -821,6 +821,149 @@
       },
     ];
 
+    // Debug function to show all detected wallets
+    function debugAllWallets() {
+      console.log('=== COMPREHENSIVE WALLET DEBUG ===');
+      console.log('User Agent:', navigator.userAgent);
+      console.log('Is Mobile:', isMobile());
+      console.log('Platform:', getMobilePlatform());
+      
+      // Check all possible wallet objects
+      console.log('window.solana:', window.solana);
+      console.log('window.phantom:', window.phantom);
+      console.log('window.solflare:', window.solflare);
+      console.log('window.backpack:', window.backpack);
+      console.log('window.glow:', window.glow);
+      console.log('window.trustwallet:', window.trustwallet);
+      console.log('window.exodus:', window.exodus);
+      
+      // Check for specific properties
+      if (window.solana) {
+        console.log('window.solana properties:', Object.getOwnPropertyNames(window.solana));
+        console.log('window.solana.isPhantom:', window.solana.isPhantom);
+        console.log('window.solana.isSolflare:', window.solana.isSolflare);
+        console.log('window.solana.isBackpack:', window.solana.isBackpack);
+        console.log('window.solana.isGlow:', window.solana.isGlow);
+        console.log('window.solana.isTrust:', window.solana.isTrust);
+        console.log('window.solana.isExodus:', window.solana.isExodus);
+        console.log('window.solana.connect:', typeof window.solana.connect);
+      }
+      
+      // Run aggressive detection
+      const detectedWallet = detectAnyMobileWallet();
+      console.log('Aggressive detection result:', detectedWallet);
+      
+      // Check each wallet definition
+      WALLET_DEFS.forEach(wallet => {
+        const provider = wallet.provider();
+        console.log(`${wallet.name} provider:`, provider);
+        if (provider) {
+          console.log(`${wallet.name} methods:`, Object.getOwnPropertyNames(provider));
+        }
+      });
+      
+      console.log('=== END COMPREHENSIVE DEBUG ===');
+      
+      // Show results in modal
+      const results = [
+        `Mobile: ${isMobile()}`,
+        `Platform: ${getMobilePlatform()}`,
+        `window.solana: ${!!window.solana}`,
+        `window.phantom: ${!!window.phantom}`,
+        `window.solflare: ${!!window.solflare}`,
+        `window.backpack: ${!!window.backpack}`,
+        `window.glow: ${!!window.glow}`,
+        `window.trustwallet: ${!!window.trustwallet}`,
+        `window.exodus: ${!!window.exodus}`,
+        `Detected Wallet: ${detectedWallet ? detectedWallet.name : 'None'}`
+      ].join('\n');
+      
+      showStatus(`Debug Results:\n${results}`, 'loading');
+    }
+
+    // Aggressive mobile wallet detection - detect ANY available wallet
+    function detectAnyMobileWallet() {
+      const isMobileDevice = isMobile();
+      console.log('=== AGGRESSIVE MOBILE WALLET DETECTION ===');
+      console.log('Device:', isMobileDevice ? 'Mobile' : 'Desktop');
+      console.log('User Agent:', navigator.userAgent);
+      
+      if (!isMobileDevice) return null;
+      
+      // Check for ANY available wallet provider on mobile
+      const availableProviders = [];
+      
+      // Check window.solana (most common)
+      if (window.solana) {
+        console.log('Found window.solana:', window.solana);
+        availableProviders.push({
+          name: 'Generic Solana',
+          provider: window.solana,
+          type: 'solana'
+        });
+      }
+      
+      // Check specific wallet providers
+      if (window.phantom && window.phantom.solana) {
+        console.log('Found window.phantom.solana:', window.phantom.solana);
+        availableProviders.push({
+          name: 'Phantom',
+          provider: window.phantom.solana,
+          type: 'phantom'
+        });
+      }
+      
+      if (window.solflare) {
+        console.log('Found window.solflare:', window.solflare);
+        availableProviders.push({
+          name: 'Solflare',
+          provider: window.solflare,
+          type: 'solflare'
+        });
+      }
+      
+      if (window.backpack) {
+        console.log('Found window.backpack:', window.backpack);
+        availableProviders.push({
+          name: 'Backpack',
+          provider: window.backpack,
+          type: 'backpack'
+        });
+      }
+      
+      if (window.glow) {
+        console.log('Found window.glow:', window.glow);
+        availableProviders.push({
+          name: 'Glow',
+          provider: window.glow,
+          type: 'glow'
+        });
+      }
+      
+      if (window.trustwallet) {
+        console.log('Found window.trustwallet:', window.trustwallet);
+        availableProviders.push({
+          name: 'Trust Wallet',
+          provider: window.trustwallet,
+          type: 'trust'
+        });
+      }
+      
+      if (window.exodus) {
+        console.log('Found window.exodus:', window.exodus);
+        availableProviders.push({
+          name: 'Exodus',
+          provider: window.exodus,
+          type: 'exodus'
+        });
+      }
+      
+      console.log('Available providers:', availableProviders);
+      console.log('=== END AGGRESSIVE DETECTION ===');
+      
+      return availableProviders.length > 0 ? availableProviders[0] : null;
+    }
+
     // Check if mobile wallet is actually available in browser
     function isMobileWalletAvailable(wallet) {
       const provider = wallet.provider();
@@ -828,44 +971,13 @@
   
       // Basic check for provider existence
       if (!provider) {
-        // On mobile, try to detect any available wallet
+        // On mobile, try aggressive detection
         if (isMobileDevice) {
-          console.log(`No specific ${wallet.name} provider found, checking for any available wallet...`);
+          console.log(`No specific ${wallet.name} provider found, trying aggressive detection...`);
           
-          // Check for any solana provider on mobile
-          if (window.solana && typeof window.solana.connect === 'function') {
-            console.log(`Found generic solana provider for ${wallet.name}`);
-            return true;
-          }
-          
-          // Check for specific wallet providers
-          if (window.phantom && window.phantom.solana) {
-            console.log(`Found phantom provider for ${wallet.name}`);
-            return true;
-          }
-          
-          if (window.solflare && typeof window.solflare.connect === 'function') {
-            console.log(`Found solflare provider for ${wallet.name}`);
-            return true;
-          }
-          
-          if (window.backpack && typeof window.backpack.connect === 'function') {
-            console.log(`Found backpack provider for ${wallet.name}`);
-            return true;
-          }
-          
-          if (window.glow && typeof window.glow.connect === 'function') {
-            console.log(`Found glow provider for ${wallet.name}`);
-            return true;
-          }
-          
-          if (window.trustwallet && typeof window.trustwallet.connect === 'function') {
-            console.log(`Found trust wallet provider for ${wallet.name}`);
-            return true;
-          }
-          
-          if (window.exodus && typeof window.exodus.connect === 'function') {
-            console.log(`Found exodus provider for ${wallet.name}`);
+          const detectedWallet = detectAnyMobileWallet();
+          if (detectedWallet) {
+            console.log(`Found available wallet: ${detectedWallet.name} for ${wallet.name}`);
             return true;
           }
         }
@@ -955,35 +1067,18 @@
         let provider = wallet.provider();
         console.log(`${wallet.name} provider:`, provider);
         
-        // On mobile, if no specific provider found, try to use any available wallet
+        // On mobile, if no specific provider found, try aggressive detection
         if (!provider && isMobileDevice) {
-          console.log(`No specific ${wallet.name} provider, trying to find any available wallet...`);
+          console.log(`No specific ${wallet.name} provider, trying aggressive mobile detection...`);
           
-          // Try to find any available wallet provider
-          if (window.solana && typeof window.solana.connect === 'function') {
-            provider = window.solana;
-            console.log(`Using generic solana provider for ${wallet.name}`);
-          } else if (window.phantom && window.phantom.solana) {
-            provider = window.phantom.solana;
-            console.log(`Using phantom provider for ${wallet.name}`);
-          } else if (window.solflare && typeof window.solflare.connect === 'function') {
-            provider = window.solflare;
-            console.log(`Using solflare provider for ${wallet.name}`);
-          } else if (window.backpack && typeof window.backpack.connect === 'function') {
-            provider = window.backpack;
-            console.log(`Using backpack provider for ${wallet.name}`);
-          } else if (window.glow && typeof window.glow.connect === 'function') {
-            provider = window.glow;
-            console.log(`Using glow provider for ${wallet.name}`);
-          } else if (window.trustwallet && typeof window.trustwallet.connect === 'function') {
-            provider = window.trustwallet;
-            console.log(`Using trust wallet provider for ${wallet.name}`);
-          } else if (window.exodus && typeof window.exodus.connect === 'function') {
-            provider = window.exodus;
-            console.log(`Using exodus provider for ${wallet.name}`);
+          const detectedWallet = detectAnyMobileWallet();
+          if (detectedWallet) {
+            provider = detectedWallet.provider;
+            console.log(`Using detected wallet: ${detectedWallet.name} for ${wallet.name}`);
           }
         }
         
+        // If still no provider, only then redirect to app store
         if (!provider) {
           if (isMobileDevice) {
             // Try to open mobile app
@@ -1075,9 +1170,9 @@
          <p style="color:#00FF88;font-size:0.9em;margin-bottom:20px;">
            📱 Mobile detected - Tap to open app or install
          </p>
-         <button onclick="detectMobileWallets()" style="background:#333;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:0.8em;margin-bottom:10px;cursor:pointer;">🔍 Debug Wallets</button>` : 
+         <button onclick="debugAllWallets()" style="background:#333;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:0.8em;margin-bottom:10px;cursor:pointer;">🔍 Debug All Wallets</button>` : 
         `<h2 style="margin-bottom: 20px;">Select Wallet</h2>
-         <button onclick="detectMobileWallets()" style="background:#333;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:0.8em;margin-bottom:10px;cursor:pointer;">🔍 Debug Wallets</button>`;
+         <button onclick="debugAllWallets()" style="background:#333;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:0.8em;margin-bottom:10px;cursor:pointer;">🔍 Debug All Wallets</button>`;
       
       list.innerHTML = header;
       

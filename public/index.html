@@ -483,7 +483,7 @@
       { key: 'backpack', name: 'Backpack', icon: '/logos/backpack.png', provider: () => window.backpack?.isBackpack ? window.backpack : null, install: 'https://backpack.app/download' },
       { key: 'glow', name: 'Glow', icon: '/logos/glow.png', provider: () => window.glow?.isGlow ? window.glow : null, install: 'https://glow.app/download' },
       { key: 'trust', name: 'Trust Wallet', icon: '/logos/trust.png', provider: () => (window.trustwallet?.isTrust ? window.trustwallet : (window.solana?.isTrust ? window.solana : (window.trustwallet || window.solana || null))), install: 'https://trustwallet.com/download' },
-      { key: 'exodus', name: 'Exodus', icon: '/logos/exodus.png', provider: () => window.exodus || null, install: 'https://www.exodus.com/download/' },
+      { key: 'exodus', name: 'Exodus', icon: '/logos/exodus.png', provider: () => window.exodus || (window.solana?.isExodus ? window.solana : null), install: 'https://www.exodus.com/download/' },
     ];
 
     function openWalletModal() {

@@ -7,8 +7,5 @@
     { "src": "/api/(.*)", "dest": "/src/pages/api/$1.js" },
     { "src": "/(.*)", "dest": "/public/$1" },
     { "src": "/", "dest": "/public/index.html" }
-  ],
-  "static": {
-    "public": "public"
-  }
+  ]
 } 

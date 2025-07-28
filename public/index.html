@@ -486,7 +486,8 @@
     // --- Countdown logic ---
     function updateCountdown() {
       // Set countdown to 30 days from today's actual date (July 28, 2024)
-      const target = new Date('2024-08-27T23:59:59Z').getTime(); // 30 days from July 28, 2024
+      const today = new Date('2024-07-28T00:00:00Z'); // July 28, 2024
+      const target = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000)); // 30 days from July 28
       const interval = setInterval(() => {
         const now = new Date().getTime();
         const distance = target - now;

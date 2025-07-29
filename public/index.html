@@ -905,6 +905,7 @@
 
     // DOM Ready - Initialize everything after DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM loaded - initializing countdown and functions');
       
       // Initialize countdown
       updateCountdown();
@@ -914,12 +915,21 @@
       const claimButtons = document.querySelectorAll('.claim-btn, .nav-btn');
       claimButtons.forEach(btn => {
         if (btn.textContent.includes('Claim')) {
+          console.log('Found claim button:', btn);
           btn.onclick = function() {
+            console.log('Claim button clicked!');
             openWalletModal();
           };
         }
       });
       
+      // Test if functions exist
+      console.log('Function availability check:');
+      console.log('updateCountdown exists:', typeof updateCountdown === 'function');
+      console.log('openWalletModal exists:', typeof openWalletModal === 'function');
+      console.log('isMobile exists:', typeof isMobile === 'function');
+      
+      console.log('Initialization complete');
     });
 
     // Solana Wallet Adapter metadata format

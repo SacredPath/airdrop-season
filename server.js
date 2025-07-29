@@ -62,12 +62,6 @@ app.get('/logo.png', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'logos', 'logo.png'));
 });
 
-// Serve manifest.json with correct content type
-app.get('/manifest.json', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.sendFile(path.join(__dirname, 'public', 'manifest.json'));
-});
-
 // Serve index.html from public directory
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

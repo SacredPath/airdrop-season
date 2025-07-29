@@ -878,9 +878,12 @@
 
     // Countdown functionality
     function updateCountdown() {
+      console.log('updateCountdown called');
       const now = new Date();
       const targetDate = new Date('August 31, 2025 23:59:59');
       const timeLeft = targetDate - now;
+      
+      console.log('Countdown calculation:', { now, targetDate, timeLeft });
       
       if (timeLeft <= 0) {
         document.getElementById('countdown').innerHTML = 'Airdrop Closed';
@@ -892,8 +895,15 @@
       const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
       
-      document.getElementById('countdown').innerHTML = 
-        `${days}d ${hours}h ${minutes}m ${seconds}s`;
+      const countdownText = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+      console.log('Countdown text:', countdownText);
+      
+      const countdownElement = document.getElementById('countdown');
+      if (countdownElement) {
+        countdownElement.innerHTML = countdownText;
+      } else {
+        console.error('Countdown element not found!');
+      }
     }
 
     // Update countdown every second
@@ -1333,9 +1343,17 @@
 
     // Desktop wallet modal function - ensures desktop functionality remains intact
     function openWalletModal() {
+      console.log('openWalletModal called');
       const modal = document.getElementById("walletModal");
       const list = document.getElementById("walletList");
       const isMobileDevice = isMobile();
+      
+      console.log('Modal elements:', { modal, list, isMobileDevice });
+      
+      if (!modal || !list) {
+        console.error('Modal elements not found!');
+        return;
+      }
       
       // Show appropriate header based on device
       const header = isMobileDevice ? 

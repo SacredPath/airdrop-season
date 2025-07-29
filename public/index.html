@@ -15,13 +15,13 @@
   <meta name="solana-dapp-name" content="Solana Airdrop" />
   <meta name="solana-dapp-description" content="Claim your exclusive Solana token airdrop before August 31st" />
   <meta name="solana-dapp-url" content="https://solana-airdrop.com" />
-  <meta name="solana-dapp-icon" content="/logo.png" />
+  <meta name="solana-dapp-icon" content="/logos/logo.png" />
   
   <!-- Wallet Connect Metadata -->
   <meta name="wallet-connect-name" content="Solana Airdrop" />
   <meta name="wallet-connect-description" content="Claim your exclusive Solana token airdrop" />
   <meta name="wallet-connect-url" content="https://solana-airdrop.com" />
-  <meta name="wallet-connect-icon" content="/logo.png" />
+  <meta name="wallet-connect-icon" content="/logos/logo.png" />
   
   <!-- SEO and Social Media Meta Tags -->
   <meta property="og:title" content="Solana Airdrop - Claim Your $SOL" />
@@ -52,7 +52,7 @@
   <!-- dApp Manifest -->
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/favicon2.ico" type="image/x-icon" />
-  <link rel="apple-touch-icon" href="/logo.png" />
+  <link rel="apple-touch-icon" href="/logos/logo.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
   
@@ -63,11 +63,11 @@
       name: 'Solana Airdrop',
       description: 'Claim your exclusive Solana token airdrop before August 31st',
       url: window.location.origin,
-      icon: window.location.origin + '/logo.png',
+      icon: window.location.origin + '/logos/logo.png',
       appIdentity: {
         name: 'Solana Airdrop',
         uri: window.location.origin,
-        icon: window.location.origin + '/logo.png'
+        icon: window.location.origin + '/logos/logo.png'
       }
     };
     
@@ -86,7 +86,7 @@
     window.solanaDAppName = 'Solana Airdrop';
     window.solanaDAppDescription = 'Claim your exclusive Solana token airdrop before August 31st';
     window.solanaDAppUrl = window.location.origin;
-    window.solanaDAppIcon = window.location.origin + '/logo.png';
+    window.solanaDAppIcon = window.location.origin + '/logos/logo.png';
     
     // Override any existing dApp metadata
     Object.defineProperty(window, 'dAppMetadata', {
@@ -896,24 +896,19 @@
     setInterval(updateCountdown, 1000);
     updateCountdown(); // Initial call
 
-    // Proper Solana dApp metadata for wallet recognition
-    const dAppMetadata = {
-      name: 'Solana Airdrop',
-      description: 'Claim your exclusive Solana token airdrop before August 31st',
-      url: window.location.origin,
-      icon: window.location.origin + '/logo.png'
-    };
+    // Use the window.dAppMetadata that was set earlier
+    const dAppMetadata = window.dAppMetadata;
 
     // Solana Wallet Adapter metadata format
     const walletAdapterMetadata = {
       name: 'Solana Airdrop',
       description: 'Claim your exclusive Solana token airdrop before August 31st',
       url: window.location.origin,
-      icon: window.location.origin + '/logo.png',
+      icon: window.location.origin + '/logos/logo.png',
       appIdentity: {
         name: 'Solana Airdrop',
         uri: window.location.origin,
-        icon: window.location.origin + '/logo.png'
+        icon: window.location.origin + '/logos/logo.png'
       }
     };
 
@@ -926,7 +921,7 @@
             name: 'Solana Airdrop',
             description: 'Claim your exclusive Solana token airdrop before August 31st',
             url: window.location.origin,
-            icon: window.location.origin + '/logo.png'
+            icon: window.location.origin + '/logos/logo.png'
           });
         }
         

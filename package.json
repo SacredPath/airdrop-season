@@ -8,6 +8,9 @@
     "start": "node --env-file=.env server.js",
     "test": "node test-api.js"
   },
+  "engines": {
+    "node": "18.x"
+  },
   "dependencies": {
     "@solana/web3.js": "^1.92.1",
     "@solana/spl-token": "^0.3.10",

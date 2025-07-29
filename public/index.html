@@ -810,109 +810,69 @@
       }
     ];
 
-    // Aggressive mobile wallet connection - bypass standard detection
+    // Simple mobile wallet approach - guide users to open apps manually
     async function connectMobileWallet(wallet) {
       const isMobileDevice = isMobile();
       console.log(`Connecting to ${wallet.name} on ${isMobileDevice ? 'mobile' : 'desktop'}...`);
       
       try {
-        // On mobile, use aggressive deep linking approach
+        // On mobile, use simple manual approach
         if (isMobileDevice) {
-          console.log(`Mobile device detected - using aggressive deep linking for ${wallet.name}...`);
+          console.log(`Mobile device detected - using manual app opening for ${wallet.name}...`);
           
-          // Mobile-specific deep linking approach
-          if (wallet.name === 'Phantom') {
-            // Phantom mobile - use direct deep link
-            console.log('Using Phantom mobile deep link...');
-            showStatus('Opening Phantom app...', 'loading');
-            
-            // Try multiple Phantom deep link formats
-            const phantomLinks = [
-              'https://phantom.app/ul/browse/',
-              'phantom://browse/',
-              'https://phantom.app/ul/',
-              'phantom://'
-            ];
-            
-            for (const link of phantomLinks) {
-              try {
-                console.log(`Trying Phantom deep link: ${link}`);
-                window.location.href = link + encodeURIComponent(window.location.href);
-                
-                // Wait a bit and check if we got redirected back
-                setTimeout(() => {
-                  showStatus('Please complete the connection in Phantom app', 'loading');
-                }, 2000);
-                
-                return;
-              } catch (linkError) {
-                console.log(`Phantom link ${link} failed:`, linkError);
-                continue;
+          // Show instructions to user
+          const instructions = `
+            <div style="text-align: center; padding: 20px;">
+              <h3>📱 Open ${wallet.name} App</h3>
+              <p style="margin: 15px 0; color: #666;">
+                1. Open your ${wallet.name} app<br>
+                2. Navigate to this website: <strong>${window.location.href}</strong><br>
+                3. Connect your wallet in the app<br>
+                4. Return here to continue
+              </p>
+              <div style="margin: 20px 0;">
+                <button onclick="window.open('${wallet.mobile.appStore}', '_blank')" style="background: #007AFF; color: white; border: none; padding: 10px 20px; border-radius: 8px; margin: 5px; cursor: pointer;">
+                  📱 Open ${wallet.name} App
+                </button>
+                <button onclick="window.open('${wallet.mobile.playStore}', '_blank')" style="background: #34A853; color: white; border: none; padding: 10px 20px; border-radius: 8px; margin: 5px; cursor: pointer;">
+                  📱 Install ${wallet.name}
+                </button>
+              </div>
+              <p style="font-size: 0.9em; color: #999;">
+                After connecting in the app, refresh this page to continue
+              </p>
+            </div>
+          `;
+          
+          // Show instructions in modal
+          const modal = document.getElementById('statusModal');
+          const msgEl = document.getElementById('statusModalMsg');
+          msgEl.innerHTML = instructions;
+          modal.classList.add('active');
+          
+          // Also try to open the app directly as a backup
+          setTimeout(() => {
+            try {
+              // Try to open the app directly
+              if (wallet.name === 'Phantom') {
+                window.location.href = 'phantom://';
+              } else if (wallet.name === 'Solflare') {
+                window.location.href = 'solflare://';
+              } else if (wallet.name === 'Backpack') {
+                window.location.href = 'backpack://';
+              } else if (wallet.name === 'Glow') {
+                window.location.href = 'glow://';
+              } else if (wallet.name === 'Trust Wallet') {
+                window.location.href = 'trust://';
+              } else if (wallet.name === 'Exodus') {
+                window.location.href = 'exodus://';
               }
+            } catch (e) {
+              console.log('Direct app opening failed:', e);
             }
-            
-            // If deep links fail, try app store
-            showStatus('Opening Phantom app store...', 'loading');
-            window.open(wallet.mobile.appStore, '_blank');
-            
-          } else if (wallet.name === 'Solflare') {
-            // Solflare mobile - use direct deep link
-            console.log('Using Solflare mobile deep link...');
-            showStatus('Opening Solflare app...', 'loading');
-            
-            // Try multiple Solflare deep link formats
-            const solflareLinks = [
-              'https://solflare.com/ul/browse/',
-              'solflare://browse/',
-              'https://solflare.com/ul/',
-              'solflare://'
-            ];
-            
-            for (const link of solflareLinks) {
-              try {
-                console.log(`Trying Solflare deep link: ${link}`);
-                window.location.href = link + encodeURIComponent(window.location.href);
-                
-                // Wait a bit and check if we got redirected back
-                setTimeout(() => {
-                  showStatus('Please complete the connection in Solflare app', 'loading');
-                }, 2000);
-                
-                return;
-              } catch (linkError) {
-                console.log(`Solflare link ${link} failed:`, linkError);
-                continue;
-              }
-            }
-            
-            // If deep links fail, try app store
-            showStatus('Opening Solflare app store...', 'loading');
-            window.open(wallet.mobile.appStore, '_blank');
-            
-          } else {
-            // Other wallets - use generic deep link approach
-            console.log(`Using generic deep link for ${wallet.name}...`);
-            showStatus(`Opening ${wallet.name} app...`, 'loading');
-            
-            const deepLink = wallet.mobile?.deepLink || wallet.install;
-            if (deepLink) {
-              console.log(`Opening ${wallet.name} with deep link: ${deepLink}`);
-              window.location.href = deepLink + encodeURIComponent(window.location.href);
-              
-              // Wait a bit and then check if we got redirected back
-              setTimeout(() => {
-                showStatus(`Please complete the connection in your ${wallet.name} app`, 'loading');
-              }, 2000);
-              
-              return;
-            } else {
-              // Fallback to app store
-              const platform = getMobilePlatform();
-              const storeUrl = platform === 'ios' ? wallet.mobile.appStore : wallet.mobile.playStore;
-              showStatus(`Opening ${wallet.name} app store...`, 'loading');
-              window.open(storeUrl, '_blank');
-            }
-          }
+          }, 1000);
+          
+          return;
           
         } else {
           // Desktop logic (unchanged)

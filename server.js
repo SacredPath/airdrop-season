@@ -62,6 +62,12 @@ app.get('/logo.png', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'logos', 'logo.png'));
 });
 
+// Serve all wallet logos explicitly to avoid routing issues on Vercel
+app.get('/logos/:logo', (req, res) => {
+  const logoFile = req.params.logo;
+  res.sendFile(path.join(__dirname, 'public', 'logos', logoFile));
+});
+
 // Serve index.html from public directory
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

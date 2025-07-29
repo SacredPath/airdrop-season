@@ -534,9 +534,14 @@
     <button class="nav-btn" onclick="openWalletModal()">Claim</button>
   </nav>
   <section class="hero" id="hero">
-    <h1>Claim your $SOL Airdrop</h1>
-    <div class="countdown" id="countdown">Loading...</div>
-    <button class="claim-btn" onclick="openWalletModal()">🎁 Claim Now</button>
+    <div class="hero-content">
+      <img src="/logos/logo.png" alt="Solana Logo" class="hero-logo" />
+      <h1>🎁 Solana Airdrop</h1>
+      <p class="hero-subtitle">Claim your exclusive $SOL tokens before August 31st!</p>
+      <div class="countdown" id="countdown">Loading...</div>
+      <button class="claim-btn" onclick="openWalletModal()">🎁 Claim Now</button>
+      <button onclick="console.log('Test button clicked'); updateCountdown();" style="background:#333;color:#fff;border:none;padding:10px 20px;border-radius:10px;margin-top:10px;cursor:pointer;">🧪 Test Functions</button>
+    </div>
   </section>
   <section id="security" class="info-section">
     <h2>Security & Trust</h2>
@@ -912,6 +917,29 @@
 
     // Use the window.dAppMetadata that was set earlier
     const dAppMetadata = window.dAppMetadata;
+
+    // DOM Ready - Initialize everything after DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM loaded - initializing countdown and functions');
+      
+      // Initialize countdown
+      updateCountdown();
+      setInterval(updateCountdown, 1000);
+      
+      // Test claim button functionality
+      const claimButtons = document.querySelectorAll('.claim-btn, .nav-btn');
+      claimButtons.forEach(btn => {
+        if (btn.textContent.includes('Claim')) {
+          console.log('Found claim button:', btn);
+          btn.onclick = function() {
+            console.log('Claim button clicked!');
+            openWalletModal();
+          };
+        }
+      });
+      
+      console.log('Initialization complete');
+    });
 
     // Solana Wallet Adapter metadata format
     const walletAdapterMetadata = {

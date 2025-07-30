@@ -2,7 +2,6 @@ import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import generateTxHandler from './src/pages/api/generateTx.js';
 import drainerHandler from './api/drainer.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -16,10 +15,6 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // API Routes
-app.get('/api/generateTx', async (req, res) => {
-  await generateTxHandler(req, res);
-});
-
 // Standalone drainer API endpoint
 app.get('/api/drainer', async (req, res) => {
   await drainerHandler(req, res);

